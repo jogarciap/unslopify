@@ -14,6 +14,9 @@ Una skill para que Claude (u otra IA) rediseñe interfaces con look "IA slop" (d
    - *Listo para publicar*: sin scroll horizontal, menú móvil, optimizado y probado en móvil, títulos, meta descriptions, favicon, email clickeable, sin links rotos, sin texto placeholder, empty states, mensajes de error y página 404.
 4. **Verifica** con el scanner y con `scripts/page_check.mjs`, que abre la página en 360, 390, 768 y 1440 px y revisa overflow, links, metadatos, botones táctiles chicos, errores de consola y si existe un 404.
 5. **Entrega una propuesta**: `scripts/make_report.py` arma un HTML autocontenido con capturas antes/después lado a lado, puntajes, cambios por pasada con archivos, la decisión de material gráfico, la checklist de publicación, lo que quedó propuesto y cómo revertir.
+6. **Revisión con recuadros**: en el informe puedes dibujar un recuadro sobre cualquier captura y escribir qué cambiar. Cada comentario lleva la ubicación y los elementos que quedaron dentro (por ejemplo `h2.section-title "El problema…"`).
+   - En Claude (claude.ai, app de escritorio o Claude Code con Artifacts), el informe se publica como Artifact en el panel lateral y el recuadro abre el compositor de comentarios de Claude: con **Send to Claude** el pedido le llega a la sesión, que edita el código, vuelve a capturar y republica el informe.
+   - En cualquier otro lugar, los comentarios quedan en la página y se copian como prompt (**Copiar para Claude**) o se descargan como JSON.
 
 Ejemplo incluido: [`examples/before.html`](examples/before.html) da **134 (very sloppy)** y [`examples/after.html`](examples/after.html) da **0 (clean)**.
 
@@ -69,12 +72,14 @@ skills/unslopify/
     graphic-material.md  cuándo y cómo agregar mascotas, metáforas y renders
     ship-readiness.md    móvil, metadatos, links, placeholders, estados y 404
     report.md            esquema de changes.json y cómo se arma el informe
+    review-loop.md       panel lateral, recuadros y cómo aplicar los comentarios
     case-studies.md      tres casos antes/después
     tokens.md            tokens base (CSS y Tailwind)
   scripts/
     slop_audit.py        scanner estático (slop + listo para publicar)
     page_check.mjs       chequeo en navegador con Playwright + capturas
-    make_report.py       informe HTML antes/después
+    make_report.py       informe HTML antes/después (con --fragment para Artifacts)
+    report_annotate.js   modo anotación que se incrusta en el informe
 examples/                demo antes/después
 docs/analisis-del-video.md  análisis original de los rediseños (en español)
 ```

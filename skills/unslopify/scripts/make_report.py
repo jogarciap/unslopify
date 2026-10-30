@@ -4,7 +4,9 @@
 Usage:
   python make_report.py --after DIR --changes changes.json --out report.html
                         [--before DIR] [--scan-before before.json] [--scan-after after.json]
-                        [--link]   (reference images by relative path instead of embedding)
+                        [--link]      (reference images by relative path instead of embedding)
+                        [--fragment]  (write a body fragment with <title> and <style> first, for hosts
+                                       that wrap the page in their own document, e.g. Claude Artifacts)
 
 Screenshots are paired by file name between --before and --after (page_check.mjs
 names them <page>-<viewport>-fold.png / -full.png). page_check.json in each folder
@@ -16,7 +18,10 @@ import html
 import json
 import os
 import re
+import struct
 import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 ORDER = ["desktop-1440-fold", "mobile-390-fold", "desktop-1440-full", "mobile-390-full",
          "tablet-768-fold", "mobile-360-fold", "tablet-768-full", "mobile-360-full"]
@@ -42,6 +47,19 @@ I18N = {
         "Open": "Pendiente", "Not needed": "No aplica", "Kept existing": "Se mantiene el existente",
         "Proposed only": "Solo propuesto", "Skipped": "Descartado",
         "Desktop": "Escritorio", "Mobile": "Móvil", "Tablet": "Tablet", "first screen": "primera pantalla", "full page": "página completa",
+        "Mark an area": "Marcar un área", "Stop marking": "Dejar de marcar", "Comments": "Comentarios",
+        "Copy for Claude": "Copiar para Claude", "Download JSON": "Descargar JSON", "Clear": "Borrar todo",
+        "Draw a box on a screenshot, write the change and press Send to Claude.": "Dibuja un recuadro sobre una captura, escribe el cambio y presiona Send to Claude.",
+        "Draw a box on a screenshot and describe the change. Then copy the comments for your AI.": "Dibuja un recuadro sobre una captura y describe el cambio. Luego copia los comentarios para tu IA.",
+        "What should change here?": "¿Qué debería cambiar aquí?", "Save comment": "Guardar comentario", "Cancel": "Cancelar",
+        "Delete": "Eliminar", "inside": "dentro de", "covers": "incluye", "Elements": "Elementos", "Change": "Cambio",
+        "Feedback on the redesign": "Comentarios sobre el rediseño",
+        "Each item is a box drawn on a screenshot. Coordinates are CSS px of the page at that viewport width.": "Cada ítem es un recuadro dibujado sobre una captura. Las coordenadas son px CSS de la página en ese ancho de pantalla.",
+        "Apply these changes, re-capture the after screenshots, and rebuild the report.": "Aplica estos cambios, vuelve a capturar el después y regenera el informe.",
+        "Copied. Paste it in your chat with the AI.": "Copiado. Pégalo en tu chat con la IA.",
+        "Could not copy. Use Download instead.": "No se pudo copiar. Usa Descargar.",
+        "Delete all comments in this browser?": "¿Borrar todos los comentarios guardados en este navegador?",
+        "Tap again to delete all": "Toca de nuevo para borrar todo", "Clear": "Borrar todo", "Redesign": "Rediseño de",
     }
 }
 LANG = "en"
@@ -77,6 +95,40 @@ def label_for(name):
     kind = t({"desktop": "Desktop", "mobile": "Mobile", "tablet": "Tablet"}[kind])
     part = t("first screen" if part == "fold" else "full page")
     return f"{kind} {w}px · {part}" + (f" · /{page}" if page and page != "home" else "")
+
+
+JS_KEYS = ["Mark an area", "Stop marking", "Draw a box on a screenshot, write the change and press Send to Claude.",
+           "Draw a box on a screenshot and describe the change. Then copy the comments for your AI.",
+           "What should change here?", "Save comment", "Cancel", "Delete", "inside", "covers", "Elements", "Change",
+           "Feedback on the redesign",
+           "Each item is a box drawn on a screenshot. Coordinates are CSS px of the page at that viewport width.",
+           "Apply these changes, re-capture the after screenshots, and rebuild the report.",
+           "Copied. Paste it in your chat with the AI.", "Could not copy. Use Download instead.",
+           "Delete all comments in this browser?", "Tap again to delete all", "Clear"]
+
+
+def png_size(path):
+    with open(path, "rb") as fh:
+        head = fh.read(24)
+    if head[:8] != b"\x89PNG\r\n\x1a\n":
+        return 0, 0
+    return struct.unpack(">II", head[16:24])
+
+
+def layout_for(shot_path):
+    base = re.sub(r"-(fold|full)\.png$", "-layout.json", shot_path)
+    data = load(base) if base != shot_path else None
+    return data.get("elements") if data else None
+
+
+def shot_html(side, name, path, out_dir, link, registry):
+    sid = f"{side}/{name}"
+    w, h = png_size(path)
+    side_label = t(side.capitalize())
+    registry[sid] = {"label": f"{side_label} · {label_for(name)}", "w": w, "h": h, "layout": layout_for(path)}
+    return (f'<figure><figcaption>{side_label}</figcaption><div class="shot" data-shot="{esc(sid)}">'
+            f'<img loading="lazy" draggable="false" alt="{side_label}: {esc(label_for(name))}" '
+            f'src="{img_src(path, out_dir, link)}" width="{w}" height="{h}"></div></figure>')
 
 
 def shots(before, after):
@@ -121,6 +173,7 @@ def main():
     ap.add_argument("--scan-before"); ap.add_argument("--scan-after")
     ap.add_argument("--changes", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--link", action="store_true")
+    ap.add_argument("--fragment", action="store_true")
     a = ap.parse_args()
 
     ch = load(a.changes) or {}
@@ -133,15 +186,17 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
 
     # ---- screenshots
-    tabs, panes = [], []
+    tabs, panes, registry = [], [], {}
     for i, (name, bp, ap_) in enumerate(shots(a.before, a.after)):
         tabs.append(f'<button role="tab" aria-selected="{str(i == 0).lower()}" data-i="{i}">{esc(label_for(name))}</button>')
-        before_html = (f'<figure><figcaption>{t("Before")}</figcaption><img loading="lazy" alt="{t("Before")}: {esc(label_for(name))}" src="{img_src(bp, out_dir, a.link)}"></figure>'
-                       if bp else '<figure class="empty"><figcaption>{t("Before")}</figcaption><p>{t("No capture")}</p></figure>')
-        after_html = f'<figure><figcaption>{t("After")}</figcaption><img loading="lazy" alt="{t("After")}: {esc(label_for(name))}" src="{img_src(ap_, out_dir, a.link)}"></figure>'
+        before_html = (shot_html("before", name, bp, out_dir, a.link, registry) if bp
+                       else f'<figure class="empty"><figcaption>{t("Before")}</figcaption><p>{t("No capture")}</p></figure>')
+        after_html = shot_html("after", name, ap_, out_dir, a.link, registry)
         mobile = "mobile" in name
         panes.append(f'<div class="pane{" pane--narrow" if mobile else ""}" data-i="{i}"{"" if i == 0 else " hidden"}>{before_html}{after_html}</div>')
-    shots_html = (f'<div class="tabs" role="tablist">{"".join(tabs)}</div>{"".join(panes)}' if tabs
+    annotate_bar = (f'<div class="annotate-bar"><button type="button" class="btn" id="annotate-toggle" aria-pressed="false">{t("Mark an area")}</button>'
+                    f'<span id="annotate-hint" class="muted"></span></div>')
+    shots_html = (f'{annotate_bar}<div class="tabs" role="tablist">{"".join(tabs)}</div>{"".join(panes)}' if tabs
                   else f'<p class="muted">{t("No screenshots were captured for this run.")}</p>')
 
     # ---- passes
@@ -176,6 +231,28 @@ def main():
         return "<ul class='plain'>" + "".join(f"<li>{esc(x)}</li>" for x in items) + "</ul>" if items else ""
 
     title = ch.get("project") or "UI redesign"
+    data = {"project": title, "i18n": {k: t(k) for k in JS_KEYS}, "shots": registry}
+    data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    with open(os.path.join(HERE, "report_annotate.js"), encoding="utf-8") as fh:
+        annotate_js = fh.read()
+    sections = []
+    if g_html:
+        sections.append(f'<h2>{t("Graphic material")}</h2>{g_html}')
+    if ship_html:
+        sections.append(f'<h2>{t("Ship-readiness")}</h2>{ship_html}')
+    if ch.get("proposals"):
+        sections.append(f'<h2>{t("Proposed, not built")}</h2>{bullet_list("proposals")}')
+    if ch.get("untouched"):
+        sections.append(f'<h2>{t("Left unchanged on purpose")}</h2>{bullet_list("untouched")}')
+    if ch.get("revert"):
+        sections.append(f'<h2>{t("How to revert")}</h2><div class="revert">{esc(ch.get("revert"))}</div>')
+    feedback = (f'<aside id="feedback" class="feedback" hidden aria-label="{t("Comments")}">'
+                f'<div class="feedback__head"><b>{t("Comments")} <span id="feedback-count">0</span></b></div>'
+                f'<ol id="feedback-list"></ol>'
+                f'<div class="feedback__actions"><button type="button" class="btn btn--primary" id="feedback-copy">{t("Copy for Claude")}</button>'
+                f'<button type="button" class="btn" id="feedback-download">{t("Download JSON")}</button>'
+                f'<button type="button" class="btn btn--quiet" id="feedback-clear">{t("Clear")}</button></div>'
+                f'<p id="feedback-status" class="muted" aria-live="polite"></p></aside>')
     doc = f"""<!doctype html>
 <html lang="{esc(ch.get('lang', 'en'))}">
 <head>
@@ -192,10 +269,14 @@ def main():
 @media (prefers-color-scheme: dark) {{ :root:not([data-theme="light"]) {{
   --bg:#0A0A0B; --surface:#131315; --surface-2:#1A1A1D; --line:rgba(255,255,255,.08);
   --text:#EDEDEF; --text-2:#A1A1A8; --text-3:#6E6E76; --accent:#6E9BFF;
-  --ok:#4CC38A; --warn:#E3B341; --bad:#F2555A; }} }}
+  --ok:#4CC38A; --warn:#E3B341; --bad:#F2555A; color-scheme:dark; }} }}
+:root[data-theme="dark"] {{ color-scheme:dark;
+  --bg:#0A0A0B; --surface:#131315; --surface-2:#1A1A1D; --line:rgba(255,255,255,.08);
+  --text:#EDEDEF; --text-2:#A1A1A8; --text-3:#6E6E76; --accent:#6E9BFF;
+  --ok:#4CC38A; --warn:#E3B341; --bad:#F2555A; }}
 * {{ box-sizing:border-box }}
 body {{ margin:0; background:var(--bg); color:var(--text); font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }}
-.wrap {{ max-width:1200px; margin:0 auto; padding:40px 24px 80px }}
+.wrap {{ max-width:1200px; margin:0 auto; padding-block:40px 80px; padding-left:max(24px, env(safe-area-inset-left, 0px)); padding-right:max(24px, env(safe-area-inset-right, 0px)) }}
 header p {{ margin:8px 0 0; color:var(--text-2); max-width:70ch }}
 h1 {{ margin:0; font-size:32px; font-weight:600; letter-spacing:-.02em }}
 h1 span {{ color:var(--text-3) }}
@@ -207,6 +288,7 @@ h3 {{ margin:0 0 8px; font-size:16px; font-weight:600 }}
 .stats {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:24px }}
 .stat {{ padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--surface) }}
 .stat__label {{ font-size:14px; color:var(--text-2) }}
+.stat, .pass, .decision {{ min-width:0 }}
 .stat__value {{ margin-top:8px; display:flex; align-items:baseline; gap:8px; font-size:28px; font-weight:600; font-variant-numeric:tabular-nums }}
 .stat__value .before {{ color:var(--text-3); font-weight:500 }}
 .stat__value .to {{ font-size:16px; color:var(--text-3) }}
@@ -241,9 +323,34 @@ tr:last-child td {{ border-bottom:0 }}
 .status {{ white-space:nowrap; font-weight:500 }}
 .status.ok {{ color:var(--ok) }} .status.warn {{ color:var(--warn) }} .status.bad {{ color:var(--bad) }} .status.muted {{ color:var(--text-3) }}
 .muted {{ color:var(--text-3) }}
+.btn {{ min-height:40px; padding:8px 14px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; font-size:14px; cursor:pointer }}
+.btn--primary {{ background:var(--text); color:var(--bg); border-color:var(--text) }}
+.btn--quiet {{ color:var(--text-3) }}
+.btn[aria-pressed="true"] {{ background:var(--accent); border-color:var(--accent); color:#fff }}
+.annotate-bar {{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:16px; font-size:14px }}
+.shot {{ position:relative; line-height:0 }}
+.shot img {{ user-select:none; -webkit-user-select:none; -webkit-user-drag:none }}
+.is-drawing .shot, .is-commenting .shot {{ cursor:crosshair; touch-action:none }}
+.box {{ position:absolute; border:2px solid var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); border-radius:4px; pointer-events:none }}
+.box--thread {{ border-style:dashed; background:transparent }}
+.box--thread.is-active {{ border-style:solid; background:color-mix(in srgb, var(--accent) 12%, transparent) }}
+.box__num {{ position:absolute; top:-12px; left:-12px; min-width:24px; height:24px; padding:0 6px; border-radius:999px; background:var(--accent); color:#fff; font:600 12px/24px ui-sans-serif,system-ui,sans-serif; text-align:center }}
+.note-form {{ position:absolute; z-index:5; width:min(340px, 90%); margin-top:8px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.18); line-height:1.5; font-size:14px }}
+.note-form label span {{ display:block; margin-bottom:4px; color:var(--text-2) }}
+.note-form textarea {{ width:100%; padding:8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text); font:inherit; font-size:16px; resize:vertical }}
+.note-form__where {{ margin:8px 0; font:12px ui-monospace,monospace; color:var(--text-3); word-break:break-word }}
+.note-form__actions, .feedback__actions {{ display:flex; flex-wrap:wrap; gap:8px }}
+.feedback {{ position:fixed; right:calc(16px + env(safe-area-inset-right, 0px)); bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:10; width:min(380px, calc(100vw - 32px)); max-height:min(60vh, 520px); overflow:auto; padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:0 12px 32px rgba(0,0,0,.2); font-size:14px }}
+.feedback[hidden] {{ display:none }}
+.feedback ol {{ margin:12px 0; padding:0; list-style:none; display:grid; gap:8px }}
+.feedback li {{ position:relative; padding:8px 28px 8px 0; border-bottom:1px solid var(--line) }}
+.feedback li p {{ margin:4px 0 0; color:var(--text-2) }}
+.feedback .link {{ padding:0; border:0; background:none; color:var(--text); font:inherit; font-weight:500; text-align:left; cursor:pointer }}
+.feedback .del {{ position:absolute; top:4px; right:0; width:28px; height:28px; border:0; background:none; color:var(--text-3); font-size:18px; cursor:pointer }}
+#feedback-status {{ margin:8px 0 0; min-height:1em }}
 .revert {{ padding:16px 20px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); color:var(--text-2) }}
 @media (max-width:720px) {{
-  .wrap {{ padding:24px 16px 64px }}
+  .wrap {{ padding-block:24px 64px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)) }}
   h1 {{ font-size:26px }}
   .pane {{ grid-template-columns:1fr }}
   th:nth-child(3), td:nth-child(3) {{ display:none }}
@@ -266,21 +373,22 @@ tr:last-child td {{ border-bottom:0 }}
 <h2>{t("What changed")}</h2>
 <div class="passes">{''.join(passes_html)}</div>
 
-{f'<h2>{t('Graphic material')}</h2>{g_html}' if g_html else ''}
-{f'<h2>{t('Ship-readiness')}</h2>{ship_html}' if ship_html else ''}
-{f'<h2>{t('Proposed, not built')}</h2>{bullet_list("proposals")}' if ch.get('proposals') else ''}
-{f'<h2>{t('Left unchanged on purpose')}</h2>{bullet_list("untouched")}' if ch.get('untouched') else ''}
-{f'<h2>{t('How to revert')}</h2><div class="revert">{esc(ch.get("revert"))}</div>' if ch.get('revert') else ''}
+{"".join(sections)}
 </div>
-<script>
-document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {{
-  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
-  document.querySelectorAll('.pane').forEach(p => p.hidden = p.dataset.i !== b.dataset.i);
-}}));
-</script>
+{feedback}
+<script type="application/json" id="unslop-data">{data_json}</script>
+<script>{annotate_js}</script>
 </body>
 </html>
 """
+    if a.fragment:
+        head = re.search(r"<head>(.*?)</head>", doc, re.S).group(1)
+        body = re.search(r"<body>(.*)</body>", doc, re.S).group(1)
+        name = (title.split(" — ")[0]).strip()
+        name = f"{t('Redesign')} {name}" if LANG == "es" else f"{name} redesign"
+        style = re.search(r"<style>.*?</style>", head, re.S).group(0)
+        doc = (f'<title>{esc(name)}</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n'
+               f'{style}\n{body}')
     with open(a.out, "w", encoding="utf-8") as fh:
         fh.write(doc)
     print(f"report written: {a.out} ({os.path.getsize(a.out) // 1024} KB, {len(tabs)} screenshot pairs)")

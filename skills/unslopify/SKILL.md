@@ -1,6 +1,6 @@
 ---
 name: unslopify
-description: Redesign web or mobile UIs that look AI-generated ("AI slop" / "vibecoded") so they look like a senior designer and front-end engineer built them, and make them ready to ship. Use when the user asks to unslop, de-slop, polish, make more professional, make less generic, or "make it look like a real product"; when restyling a landing page, dashboard, or app screen built by an AI tool; or when reviewing a UI for generic AI aesthetics (purple gradients, emoji icons, glow, "Welcome back! 👋" copy, arbitrary spacing). Also decides whether to add graphic material (a mascot, a metaphor illustration like a flame for streaks, a product render), fixes ship-readiness gaps (mobile overflow, mobile menu, page titles, meta descriptions, favicon, broken links, clickable email, placeholder text, empty/error states, 404 page), and delivers a before/after proposal report. Works on HTML/CSS, Tailwind, React, Vue, Svelte, Next.js, Astro, and similar.
+description: Redesign web or mobile UIs that look AI-generated ("AI slop" / "vibecoded") so they look like a senior designer and front-end engineer built them, and make them ready to ship. Use when the user asks to unslop, de-slop, polish, make more professional, make less generic, or "make it look like a real product"; when restyling a landing page, dashboard, or app screen built by an AI tool; or when reviewing a UI for generic AI aesthetics (purple gradients, emoji icons, glow, "Welcome back! 👋" copy, arbitrary spacing). Also decides whether to add graphic material (a mascot, a metaphor illustration like a flame for streaks, a product render), fixes ship-readiness gaps (mobile overflow, mobile menu, page titles, meta descriptions, favicon, broken links, clickable email, placeholder text, empty/error states, 404 page), and delivers a before/after proposal report the user can annotate (draw a box, write a change, send it back) for another round. Works on HTML/CSS, Tailwind, React, Vue, Svelte, Next.js, Astro, and similar.
 ---
 
 # Unslopify
@@ -40,9 +40,13 @@ Every run ends with a proposal the user can review and accept or revert.
      --scan-before before.json --scan-after after.json \
      --changes changes.json --out <out>/unslop-report.html
    ```
-   It produces one self-contained HTML file: side-by-side before/after screenshots (desktop and mobile), scores, the change log, the checklist, and open proposals.
-3. Put the report where the user can open it (inside the project, e.g. `unslop/`, or publish/share it if your environment supports that). Do not commit it unless asked.
-4. In your reply, lead with the outcome and the score change, link the report, list the 3–5 most visible changes, say what you did not change and why, and ask whether to keep or revert the changes.
+   It produces one self-contained HTML file: side-by-side before/after screenshots (desktop and mobile), scores, the change log, the checklist, open proposals, and an **annotation mode** where the user draws a box on any screenshot and writes what should change.
+3. Show the report in a side panel:
+   - **Claude with an Artifact tool**: publish it as an Artifact declaring `capabilities: {"comments": {"customAnchors": true}}`. Boxes the user draws open Claude's comment composer on that area, and **Send to Claude** delivers the comment to you with the box location and the elements inside it.
+   - **Elsewhere**: send or open the HTML file (side panel, editor preview, or browser). Comments are kept in the page; the user copies them as a prompt or downloads them as JSON.
+   Keep it in the project (e.g. `unslop/`) and do not commit it unless asked.
+4. In your reply, lead with the outcome and the score change, link the report, list the 3–5 most visible changes, say what you did not change and why, explain in one line how to mark areas and send comments, and ask whether to keep or revert the changes.
+5. **Review loop.** When comments arrive (Artifact comments, a pasted prompt, or `unslopify-feedback.json`), apply them, reply per comment, re-capture the after state, rebuild the report, and republish it to the same place. Follow [references/review-loop.md](references/review-loop.md).
 
 ## Pass 1 — Spacing
 
@@ -159,8 +163,9 @@ The goal is not "make everything dark grey like Linear". Signs you over-correcte
 - [references/graphic-material.md](references/graphic-material.md) — fit test, graphic types, placement, mascots and metaphor graphics.
 - [references/ship-readiness.md](references/ship-readiness.md) — mobile, metadata, links, placeholder text, empty/error states, 404, per framework.
 - [references/report.md](references/report.md) — `changes.json` schema and how the proposal report is built.
+- [references/review-loop.md](references/review-loop.md) — showing the report in a side panel, how annotated comments reach you, and how to apply them.
 - [references/case-studies.md](references/case-studies.md) — three before/after breakdowns.
 - [references/tokens.md](references/tokens.md) — starter token sets (CSS variables and Tailwind).
 - `scripts/slop_audit.py` — static scanner: slop score plus ship-readiness findings (Python standard library only).
-- `scripts/page_check.mjs` — browser check with Playwright: horizontal overflow per viewport, title/description/favicon, broken anchors and links, console errors, and screenshots.
-- `scripts/make_report.py` — builds the self-contained before/after HTML report.
+- `scripts/page_check.mjs` — browser check with Playwright: horizontal overflow per viewport, title/description/favicon, broken anchors and links, console errors, screenshots, and a layout map of the elements in each screenshot.
+- `scripts/make_report.py` — builds the self-contained before/after HTML report with the annotation mode (`scripts/report_annotate.js` is inlined into it).

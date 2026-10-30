@@ -164,6 +164,38 @@ for (const route of routes) {
     if (shots) {
       await page.screenshot({ path: path.join(outDir, `${slug}-${vp.name}-fold.png`) });
       await page.screenshot({ path: path.join(outDir, `${slug}-${vp.name}-full.png`), fullPage: true });
+      // element map in page CSS px (= screenshot px at scale 1), used by the report's
+      // annotation mode to say which elements a drawn box covers
+      const layout = await page.evaluate(() => {
+        const KEEP = new Set(["H1", "H2", "H3", "H4", "H5", "H6", "P", "A", "BUTTON", "IMG", "SVG", "INPUT",
+          "TEXTAREA", "SELECT", "LABEL", "LI", "SECTION", "HEADER", "FOOTER", "NAV", "MAIN", "ARTICLE",
+          "ASIDE", "FORM", "TABLE", "FIGURE", "VIDEO", "DETAILS", "SUMMARY"]);
+        const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "PATH", "G", "DEFS", "MASK", "CIRCLE", "RECT", "LINE", "POLYGON", "ELLIPSE", "USE", "PATTERN"]);
+        const name = (el) => {
+          let s = el.tagName.toLowerCase();
+          if (el.id) s += "#" + el.id;
+          const cls = typeof el.className === "string" ? el.className.trim().split(/\s+/).filter(Boolean).slice(0, 2) : [];
+          if (cls.length) s += "." + cls.join(".");
+          return s;
+        };
+        const out = [];
+        for (const el of document.querySelectorAll("body *")) {
+          const tag = el.tagName.toUpperCase();
+          if (SKIP.has(tag) || el.closest("svg") !== el && el.closest("svg")) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width < 4 || r.height < 4) continue;
+          const cs = getComputedStyle(el);
+          if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity === 0) continue;
+          const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join(" ").replace(/\s+/g, " ").trim();
+          const leafText = el.children.length === 0 ? (el.textContent || "").replace(/\s+/g, " ").trim() : own;
+          if (!KEEP.has(tag) && !el.id && !leafText && !(typeof el.className === "string" && el.className.trim())) continue;
+          const text = (leafText || el.getAttribute("aria-label") || el.getAttribute("alt") || "").slice(0, 60);
+          out.push([Math.round(r.left + scrollX), Math.round(r.top + scrollY), Math.round(r.width), Math.round(r.height), name(el), text]);
+          if (out.length >= 1500) break;
+        }
+        return { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight, elements: out };
+      });
+      fs.writeFileSync(path.join(outDir, `${slug}-${vp.name}-layout.json`), JSON.stringify(layout));
     }
     pageReport.viewports.push({ name: vp.name, ...data });
     await ctx.close();
