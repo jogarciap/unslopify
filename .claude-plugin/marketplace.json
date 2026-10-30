@@ -1,9 +1,9 @@
 {
-  "name": "unslop-ui",
-  "owner": { "name": "unslop-ui contributors" },
+  "name": "unslopify",
+  "owner": { "name": "jogarciap" },
   "plugins": [
     {
-      "name": "unslop-ui",
+      "name": "unslopify",
       "source": "./",
       "description": "Redesign AI-looking UIs so they look built by a senior designer."
     }

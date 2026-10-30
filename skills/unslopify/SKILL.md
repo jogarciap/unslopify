@@ -1,9 +1,9 @@
 ---
-name: unslop-ui
+name: unslopify
 description: Redesign web or mobile UIs that look AI-generated ("AI slop" / "vibecoded") so they look like a senior designer and front-end engineer built them, and make them ready to ship. Use when the user asks to unslop, de-slop, polish, make more professional, make less generic, or "make it look like a real product"; when restyling a landing page, dashboard, or app screen built by an AI tool; or when reviewing a UI for generic AI aesthetics (purple gradients, emoji icons, glow, "Welcome back! 👋" copy, arbitrary spacing). Also decides whether to add graphic material (a mascot, a metaphor illustration like a flame for streaks, a product render), fixes ship-readiness gaps (mobile overflow, mobile menu, page titles, meta descriptions, favicon, broken links, clickable email, placeholder text, empty/error states, 404 page), and delivers a before/after proposal report. Works on HTML/CSS, Tailwind, React, Vue, Svelte, Next.js, Astro, and similar.
 ---
 
-# Unslop UI
+# Unslopify
 
 Turn a generic AI-looking interface into one that looks deliberately designed and is ready to publish. The method comes from public "before/after" redesigns of vibecoded dashboards and apps: the after versions **remove** noise, build a **system** (spacing, type, colour tokens), spend boldness in **one** place, and add only what the product needs.
 

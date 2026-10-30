@@ -1,4 +1,4 @@
-# unslop-ui
+# unslopify
 
 Una skill para que Claude (u otra IA) rediseñe interfaces con look "IA slop" (degradados violeta, emojis como íconos, "Welcome back! 👋", spacing arbitrario) y queden como si las hubiera hecho un diseñador / front-end senior.
 
@@ -22,21 +22,21 @@ Ejemplo incluido: [`examples/before.html`](examples/before.html) da **134 (very 
 ### Claude Code (como plugin)
 
 ```
-/plugin marketplace add TU-USUARIO/unslop-ui
-/plugin install unslop-ui@unslop-ui
+/plugin marketplace add jogarciap/unslopify
+/plugin install unslopify@unslopify
 ```
 
 ### Claude Code (como skill suelta)
 
-Copia la carpeta `skills/unslop-ui` a `~/.claude/skills/` (global) o a `.claude/skills/` dentro de tu proyecto.
+Copia la carpeta `skills/unslopify` a `~/.claude/skills/` (global) o a `.claude/skills/` dentro de tu proyecto.
 
 ### Claude.ai / app de escritorio
 
-Comprime la carpeta `skills/unslop-ui` en un `.zip` y súbela en *Settings → Capabilities → Skills*.
+Comprime la carpeta `skills/unslopify` en un `.zip` y súbela en *Settings → Capabilities → Skills*.
 
 ### Otras IAs (Cursor, Codex, Copilot, Gemini…)
 
-Copia el contenido de `skills/unslop-ui/SKILL.md` (y los archivos de `references/` si caben) a las reglas del proyecto: `AGENTS.md`, `.cursor/rules/unslop-ui.mdc`, `.github/copilot-instructions.md`, etc. El scanner funciona con cualquier agente que pueda ejecutar Python.
+Copia el contenido de `skills/unslopify/SKILL.md` (y los archivos de `references/` si caben) a las reglas del proyecto: `AGENTS.md`, `.cursor/rules/unslopify.mdc`, `.github/copilot-instructions.md`, etc. El scanner funciona con cualquier agente que pueda ejecutar Python.
 
 ## Uso
 
@@ -49,20 +49,20 @@ La respuesta incluye un informe `unslop-report.html` con el antes y el después.
 O corre las herramientas directamente:
 
 ```
-python skills/unslop-ui/scripts/slop_audit.py src/
-python skills/unslop-ui/scripts/slop_audit.py src/ --json
+python skills/unslopify/scripts/slop_audit.py src/
+python skills/unslopify/scripts/slop_audit.py src/ --json
 ```
 
 ```
 # desde la carpeta del proyecto (usa su Playwright)
-node <ruta>/skills/unslop-ui/scripts/page_check.mjs http://localhost:5173 unslop/after
+node <ruta>/skills/unslopify/scripts/page_check.mjs http://localhost:5173 unslop/after
 ```
 
 ## Estructura
 
 ```
 .claude-plugin/          manifiestos de plugin y marketplace
-skills/unslop-ui/
+skills/unslopify/
   SKILL.md               instrucciones de la skill
   references/
     slop-patterns.md     catálogo de señales de slop y su arreglo
