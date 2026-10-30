@@ -1,6 +1,6 @@
 ---
 name: unslop-ui
-description: Redesign web or mobile UIs that look AI-generated ("AI slop" / "vibecoded") so they look like a senior designer and front-end engineer built them. Use when the user asks to unslop, de-slop, polish, make more professional, make less generic, or "make it look like a real product"; when restyling a landing page, dashboard, or app screen built by an AI tool; or when reviewing a UI for generic AI aesthetics (purple gradients, emoji icons, glow, "Welcome back! 👋" copy, arbitrary spacing). Works on HTML/CSS, Tailwind, React, Vue, Svelte, and similar.
+description: Redesign web or mobile UIs that look AI-generated ("AI slop" / "vibecoded") so they look like a senior designer and front-end engineer built them. Use when the user asks to unslop, de-slop, polish, make more professional, make less generic, or "make it look like a real product"; when restyling a landing page, dashboard, or app screen built by an AI tool; or when reviewing a UI for generic AI aesthetics (purple gradients, emoji icons, glow, "Welcome back! 👋" copy, arbitrary spacing). Also decides whether the redesign should gain graphic material (a mascot, a metaphor illustration like a flame for streaks, a product render) and builds it when it fits. Works on HTML/CSS, Tailwind, React, Vue, Svelte, and similar.
 ---
 
 # Unslop UI
@@ -23,7 +23,7 @@ Turn a generic AI-looking interface into one that looks deliberately designed. T
    ```
    (Path is relative to this skill's folder.) Then look at the rendered UI and list every tell from [references/slop-patterns.md](references/slop-patterns.md) you see. The scanner finds code-level tells; your eyes find hierarchy problems.
 2. **Pick a direction in one sentence** before touching code: base (near-black or off-white), one accent color and what it *means*, one personality move (display font for hero numbers, a mascot, an illustration, a distinctive layout). Example: "Neutral near-black, warm orange only for live/heart data, dot-matrix display font for the hero metric."
-3. **Run the five passes** below.
+3. **Run the six passes** below. Passes 1–4 mostly remove; pass 5 is where you may add.
 4. **Verify.** Re-run the scanner (score should fall sharply), re-screenshot, and walk the final checklist.
 5. **Report** a short changelog grouped by pass, plus anything you deliberately left alone.
 
@@ -66,9 +66,23 @@ AI output uses arbitrary values (15, 22, 37, 42 px). Replace them with a scale.
 - Replace emoji/clip-art illustrations with real assets: product screenshots, a rendered object, a photo, or nothing.
 - Keyboard hints as real keycaps: `<kbd>⌘</kbd><kbd>K</kbd>`, muted.
 - Remove badge spam: "PRO", "New ✨", "AI", colored count pills on every nav item. Counts become muted right-aligned numbers; keep at most one attention badge (e.g. unread).
-- One personality element is welcome (mascot, custom illustration, display numerals) — exactly one, placed with intent.
+- One personality element is welcome (mascot, custom illustration, display numerals) — exactly one, placed with intent. Pass 5 decides which.
 
-## Pass 5 — Structure and copy
+## Pass 5 — Graphic material (decide, then add)
+
+Removing noise often leaves a correct but anonymous UI. Senior redesigns then add **one** piece of graphic material that comes from the product itself: a mascot peeking over the lesson card of a study app, a flame-like gradient band behind a streak counter, a rendered credit card on a payments dashboard, dot-matrix numerals on a running app. Never add graphics by default; run the fit test in [references/graphic-material.md](references/graphic-material.md) and record the decision.
+
+1. **Find the metaphor.** List the product's core concepts and what they already evoke (streak → fire, payments → card, NFC → keytag, growth → plant, delivery → route). Prefer metaphors the UI already hints at (an icon, a word in the copy).
+2. **Score the fit** (audience and tone, metaphor strength, a natural anchor, ability to carry state, brand rules, execution quality). The result is one of: **add**, **propose only** (describe it in the report, don't build), or **skip**.
+3. **Choose the type** that fits: character/mascot, metaphor illustration, object/product render, data-as-graphic, atmosphere, or spot illustration for empty and success states.
+4. **Anchor it** to one component: overlap a card edge, bleed behind a number, sit in an empty state. One graphic moment per screen; never sprinkle.
+5. **Make it carry meaning or state** where possible: flame intensity follows streak length, mascot mood follows progress (sleepy at 0, celebrating on completion), card render shows the real last digits.
+6. **Build it in the palette and icon system**: inline SVG or CSS, 2–3 colours taken from the tokens, same stroke and corner language as the icons. Decorative graphics get `aria-hidden="true"`; motion respects `prefers-reduced-motion`.
+7. **Respect brand rules.** If the brand has guidelines (a logo usage doc, an approved palette), the graphic must not break them; if a new mascot or character would change the brand, choose **propose only**.
+
+If you cannot execute it at the quality of the rest of the UI, choose **propose only** and write a short brief (what, where, which states, which colours) instead of shipping clip-art.
+
+## Pass 6 — Structure and copy
 
 - Establish one focal point per screen. One hero card/metric, the rest subordinate (smaller, quieter).
 - Replace greetings with context: "Welcome back, Damir! 👋" → "October 2026"; "Hey Alex! Ready for today's run?" → "Morning run" with a date/time eyebrow.
@@ -88,17 +102,19 @@ AI output uses arbitrary values (15, 22, 37, 42 px). Replace them with a scale.
 - [ ] One focal point per screen; secondary content visibly quieter.
 - [ ] Copy is plain, specific, and free of hype and exclamation marks.
 - [ ] One icon set, one stroke width.
+- [ ] Graphic material decision recorded (add / propose only / skip) with the reason; if added, it is anchored to one component, built from the tokens, and tied to the product's metaphor or state.
 - [ ] Contrast passes; primary buttons look enabled.
 - [ ] Behavior and data unchanged.
 - [ ] Scanner score dropped; before/after screenshots compared (when rendering is possible).
 
 ## Avoid over-correcting
 
-The goal is not "make everything dark gray like Linear". Signs you over-corrected: everything is the same gray with no focal point, text is too low-contrast to read, the brand's color disappeared entirely, or you replaced purple glow with a different glow. Keep the brand's identity; express it through one accent, one typographic choice, or one illustration.
+The goal is not "make everything dark gray like Linear". Signs you over-corrected: everything is the same gray with no focal point, text is too low-contrast to read, the brand's color disappeared entirely, or you replaced purple glow with a different glow. The opposite failure is a clean UI with no personality left at all; pass 5 exists to fix that with one graphic moment that belongs to the product. Keep the brand's identity; express it through one accent, one typographic choice, or one illustration.
 
 ## References
 
 - [references/slop-patterns.md](references/slop-patterns.md) — catalog of AI-slop tells, each with the fix.
+- [references/graphic-material.md](references/graphic-material.md) — fit test, graphic types, placement, and how to build mascots and metaphor graphics.
 - [references/case-studies.md](references/case-studies.md) — three before/after breakdowns (mobile fitness app, SaaS dashboard, study app).
 - [references/tokens.md](references/tokens.md) — starter token sets (CSS variables and Tailwind) for dark and light.
 - `scripts/slop_audit.py` — static scanner for code-level tells; prints a score and findings.

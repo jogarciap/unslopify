@@ -60,10 +60,26 @@ Aquí el "después" viene con un **panel lateral que documenta las pasadas aplic
 | Copy | "Good evening 👋", "Exam in 91 days ✨", "Start 🚀", "Keep every heart ❤️", "📚 Quests", "✨ AI-powered study plan" | Mismo texto sin emojis; se elimina "AI-powered" |
 | Contraste | Botón gris lavanda que parece deshabilitado; tarjetas pastel lavadas | Tarjeta blanca sobre canvas casi negro; botón negro sólido "▶ Start" |
 | Acento | Ninguno o todo igual de apagado | **Un** color saturado con significado: tarjeta amarilla de Quests |
-| Personalidad | Ninguna | Mascota (zorro/gato naranja) que rompe el borde de la tarjeta = identidad de marca |
+| Personalidad | Ninguna | Mascota (gato/zorro naranja con cara de sueño) que asoma por el borde de la tarjeta = identidad de marca |
 | Estructura | Chips sueltos ("0 XP today", "1 drill left") | Nueva sección "Streaks" con números grandes ("0d current / 0d best") y glow de color |
 | Sombras | Sombras suaves genéricas | Shadow 0%: planos limpios, separación por contraste |
 | Tab bar | Emojis | Íconos propios, tab bar tipo "glass" |
+
+### Segundo ~30: se agrega material gráfico
+
+Después de limpiar (sacar emojis, ordenar spacing, color y tipos), el diseñador **agrega** dos piezas gráficas:
+
+1. **Mascota** (≈29,4 s): un personaje naranja tipo gato con cara de sueño, recortado para que asome por el borde superior derecho de la tarjeta "Cells and Energy". No está suelto: está anclado a la tarjeta principal y su expresión calza con el estado (de noche, racha en 0).
+2. **Llama de soplete** (≈30,6 s): aparece la sección nueva "Streaks". Los números "0d Current / 0d Best" van sobre una franja horizontal en degradado naranja → magenta → violeta, como la llama de un soplete. Repite el ícono de llama del tab "Today", así que la metáfora (racha = fuego) se vuelve parte del lenguaje de la app.
+
+Por qué funciona y no es slop:
+- El gráfico **sale del producto** (estudiar con un compañero, la racha como fuego), no es decoración genérica.
+- Hay **uno por zona**, anclado a un componente.
+- **Puede mostrar estado**: el ánimo de la mascota, la intensidad de la llama.
+- Usa la paleta del sistema y conversa con los íconos.
+- Calza con el público: una app de estudio gamificada admite personajes; un dashboard financiero no (ahí el equivalente fue un render realista de tarjetas).
+
+Esto se incorporó a la skill como la **pasada 5 — material gráfico**, con un test para decidir si agregar, solo proponer, o no agregar.
 
 ---
 
@@ -92,3 +108,4 @@ Aquí el "después" viene con un **panel lateral que documenta las pasadas aplic
 8. Detalles de oficio: keycaps reales, prima tipográfica (5′12), números tabulares, estados del sistema ("GPS READY"), títulos en dos tonos.
 9. Personalidad intencional (mascota, tipografía display) en un solo punto, no regada por todos lados.
 10. Quitar antes que agregar: menos badges, menos colores, menos efectos.
+11. Después de quitar, agregar **un** material gráfico que salga del producto (mascota, metáfora como la llama de la racha, render del objeto real), solo si calza con el público y la marca.

@@ -41,10 +41,13 @@ Three public before/after redesigns of AI-generated UIs. Use them to calibrate h
 - Spacing tokens: gap 24, gutter 20, padding 22, filler 20, width 107, radius 28.
 - Type tokens: Plus Jakarta Sans; title 28, heading 36, body 18.
 - Colour tokens: canvas (near-black navy), shadow 0%, button (black), quests (yellow).
-- Symbols: custom tab icons, action icons, chip, and a mascot (an orange fox) that overlaps the lesson card edge.
-- Structure: added a "Streaks" section (big "0d current / 0d best" over a coloured glow); tab bar made glass.
+- Symbols: custom tab icons (a flame for "Today"), action icons, chip, and a mascot.
+- Graphic material, added at the end, after the cleanup:
+  - **Mascot**: an orange, cat-like character with a sleepy, unimpressed face, cropped so it peeks over the top-right edge of the white lesson card. Its mood fits the state (evening, 0-day streak).
+  - **Flame band**: a new "Streaks" block whose "0d current / 0d best" numbers sit on a horizontal blowtorch-like gradient (orange → magenta → violet). It echoes the flame tab icon, so the metaphor becomes part of the product's language.
+- Structure: added the "Streaks" section; tab bar made glass and floating.
 - Lesson card: white surface, bold title, "3 drills · 1 min", solid black "▶ Start" pill.
 - Quests: saturated yellow card — the single accent — with clear XP chips.
 - All emoji removed from copy; "AI-powered" line removed.
 
-**Lesson:** work in explicit passes (spacing → type → colour → symbols → structure). Spend personality in one place (mascot); one saturated accent with a job.
+**Lesson:** work in explicit passes (spacing → type → colour → symbols → graphic material → structure). Remove first, then add graphics that come from the product's own concepts (studying with a companion, a streak as fire), each anchored to one component and able to show state. One saturated accent with a job.

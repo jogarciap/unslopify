@@ -8,7 +8,8 @@ Una skill para que Claude (u otra IA) rediseñe interfaces con look "IA slop" (d
 
 1. **Audita** el código con un scanner (`scripts/slop_audit.py`, solo Python estándar) que detecta emojis, degradados, texto en degradado, paletas violeta, glows, glassmorphism, copy genérico, "!!", spacing fuera de escala y exceso de tamaños de fuente y radios.
 2. **Define una dirección** en una frase: base neutra, un acento con significado, un solo toque de personalidad.
-3. **Aplica cinco pasadas**, en orden: spacing → type → colour → symbols → structure/copy.
+3. **Aplica seis pasadas**, en orden: spacing → type → colour → symbols → **material gráfico** → structure/copy.
+   La pasada de material gráfico decide, con un test de encaje (público, metáfora, lugar, estado, marca y calidad), si conviene agregar una mascota, una ilustración metafórica (por ejemplo, una llama para las rachas), un render del producto o un gráfico hecho con los datos. Si conviene, la construye en SVG/CSS con la paleta del sistema; si no, la deja como propuesta o la descarta.
 4. **Verifica** volviendo a correr el scanner y, si puede, comparando capturas antes/después.
 
 Ejemplo incluido: [`examples/before.html`](examples/before.html) da **134 (very sloppy)** y [`examples/after.html`](examples/after.html) da **0 (clean)**.
@@ -55,6 +56,7 @@ skills/unslop-ui/
   SKILL.md               instrucciones de la skill
   references/
     slop-patterns.md     catálogo de señales de slop y su arreglo
+    graphic-material.md  cuándo y cómo agregar mascotas, metáforas y renders
     case-studies.md      tres casos antes/después
     tokens.md            tokens base (CSS y Tailwind)
   scripts/slop_audit.py  scanner estático
