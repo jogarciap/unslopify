@@ -8,6 +8,11 @@ Finds: emoji in UI, gradients and gradient text, purple/violet palettes,
 coloured glow shadows, glassmorphism, hype copy, exclamation marks,
 off-scale spacing, too many font sizes / radii, uppercase tracked labels.
 Prints a score (higher = more slop) and findings with file:line locations.
+
+Also runs ship-readiness checks (project root = nearest folder with
+package.json): page title, default titles, meta description, favicon,
+viewport, mobile menu toggle, 404 page, dead links, plain-text emails and
+phones, placeholder text, and horizontal-overflow risks.
 No dependencies beyond the Python standard library.
 """
 import colorsys
@@ -84,8 +89,127 @@ def iter_files(paths):
                     yield os.path.join(root, f)
 
 
+# ---------------------------------------------------------------- ship-readiness
+MARKUP_EXTS = {".html", ".htm", ".jsx", ".tsx", ".vue", ".svelte", ".astro", ".mdx"}
+DEAD_LINK = re.compile(r"""href\s*=\s*(?:\{\s*)?(?:"#"|'#'|""|''|["']javascript:void\(0\);?["'])""")
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}(?:\.[A-Za-z]{2,})?")
+PHONE = re.compile(r"(?<![\w.#-])(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]\d{3,4}[\s.-]\d{3,4}(?![\w.-])")
+PLACEHOLDER = re.compile(
+    r"\blorem ipsum\b|\b(?:john|jane) doe\b|\byour company\b|\bcompany name\b|\bacme\b|\bfeature [123]\b"
+    r"|\b123 main st|\(555\)|\bexample\.(?:com|org)\b|placeholder\.com|via\.placeholder|picsum\.photos|unsplash\.it"
+    r"|\binsert [^<>\"']{1,30} here\b|\[your [^\]]{1,30}\]|>\s*(?:TODO|FIXME|TBD)\b", re.I)
+DEFAULT_TITLE = re.compile(
+    r"<title>\s*(?:Vite \+ React[^<]*|Vite App|Create Next App|React App|Document|Untitled|Home)\s*</title>"
+    r"|title\s*:\s*[\"'](?:Create Next App|Vite \+ React[^\"']*)[\"']", re.I)
+FIXED_WIDTH = re.compile(r"(?<![-\w])(?:min-)?width\s*:\s*(\d{3,4})px|\b(?:min-)?w-\[(\d{3,4})px\]")
+VW100 = re.compile(r"\b100vw\b|\bw-screen\b")
+NOT_FOUND_FILES = re.compile(r"(?:^|[\\/])(?:404\.(?:html|astro|tsx|jsx|vue|svelte|md|mdx)|not-found\.(?:tsx|jsx|js|ts)|\+error\.svelte|error\.vue)$")
+CATCH_ALL = re.compile(r"""path\s*[:=]\s*\{?\s*["']\*["']""")
+
+
+def find_root(paths):
+    p = os.path.abspath(paths[0])
+    p = p if os.path.isdir(p) else os.path.dirname(p)
+    cur = p
+    while True:
+        if os.path.exists(os.path.join(cur, "package.json")):
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return p
+        cur = parent
+
+
+def project_files(root):
+    for r, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".")]
+        for f in files:
+            yield os.path.join(r, f)
+
+
+def ship_audit(paths, scanned):
+    """scanned: {path: [lines]} of the files given on the command line."""
+    root = find_root(paths)
+    issues = []   # (check, [items]) ; empty items list with ok=False means "missing"
+
+    def add(check, items, ok=None):
+        issues.append({"check": check, "ok": (not items) if ok is None else ok, "items": items})
+
+    dead, emails, phones, placeholders, titles, overflow, vw = [], [], [], [], [], [], []
+    for path, lines in scanned.items():
+        markup = os.path.splitext(path)[1].lower() in MARKUP_EXTS
+        css_like = os.path.splitext(path)[1].lower() in {".css", ".scss", ".sass", ".less"} or markup
+        for n, line in enumerate(lines, 1):
+            loc, snip = f"{path}:{n}", line.strip()[:110]
+            if markup:
+                if DEAD_LINK.search(line):
+                    dead.append(f"{loc}  {snip}")
+                if EMAIL.search(line) and "mailto:" not in line and "import " not in line:
+                    emails.append(f"{loc}  {snip}")
+                if (PHONE.search(line) and "tel:" not in line and " d=" not in line
+                        and "viewBox" not in line and "points=" not in line):
+                    phones.append(f"{loc}  {snip}")
+                if PLACEHOLDER.search(line):
+                    placeholders.append(f"{loc}  {snip}")
+                if DEFAULT_TITLE.search(line):
+                    titles.append(f"{loc}  {snip}")
+            if css_like and "@media" not in line and "max-width" not in line:
+                for m in FIXED_WIDTH.finditer(line):
+                    v = int(m.group(1) or m.group(2))
+                    if v >= 480:
+                        overflow.append(f"{loc}  {snip}")
+                        break
+                if VW100.search(line):
+                    vw.append(f"{loc}  {snip}")
+
+    # project-level checks
+    blob, names = [], []
+    for f in project_files(root):
+        names.append(os.path.relpath(f, root).replace("\\", "/"))
+        if os.path.splitext(f)[1].lower() in MARKUP_EXTS | {".ts", ".js", ".mjs"} and os.path.getsize(f) < 400_000:
+            try:
+                blob.append(open(f, encoding="utf-8", errors="ignore").read())
+            except OSError:
+                pass
+    text = "\n".join(blob)
+    pkg = ""
+    try:
+        pkg = open(os.path.join(root, "package.json"), encoding="utf-8").read()
+    except OSError:
+        pass
+    is_next = '"next"' in pkg
+
+    has_title = bool(re.search(r"<title[^>]*>[^<{]+|export const metadata|generateMetadata|document\.title\s*=|useHead\(", text))
+    has_desc = bool(re.search(r"name=[\"']description[\"']|export const metadata[\s\S]{0,400}description\s*:", text))
+    has_icon = bool(re.search(r"rel=[\"'](?:shortcut )?icon[\"']", text)) or any(
+        re.search(r"(?:^|/)(?:favicon\.(?:ico|svg|png)|icon\.(?:svg|png|ico))$", n) for n in names)
+    default_icon = [n for n in names if re.search(r"(?:^|/)(?:vite|react|next)\.svg$", n)]
+    has_viewport = is_next or bool(re.search(r"name=[\"']viewport[\"']", text))
+    has_404 = any(NOT_FOUND_FILES.search(n) for n in names) or bool(CATCH_ALL.search(text))
+    has_nav = bool(re.search(r"<nav\b", text))
+    has_toggle = "aria-expanded" in text
+
+    add("Page title set", [] if has_title else ["no <title> or metadata found"])
+    add("No default page title", titles)
+    add("Meta description", [] if has_desc else ['no <meta name="description"> or metadata.description found'])
+    add("Favicon", [] if has_icon else ["no favicon link or favicon/icon file found"])
+    add("No framework default icons", [f"{n} (framework default asset)" for n in default_icon])
+    add("Viewport meta", [] if has_viewport else ['no <meta name="viewport"> found'])
+    add("Mobile menu toggle", [] if (not has_nav or has_toggle) else
+        ["<nav> found but no toggle with aria-expanded; check if links are hidden on mobile"])
+    add("404 page", [] if has_404 else ["no 404.html, not-found, +error, error.vue or catch-all route found"])
+    add("No dead links (href=\"#\", empty, javascript:void)", dead)
+    add("Emails are mailto: links", emails)
+    add("Phones are tel: links", phones)
+    add("No placeholder text", placeholders)
+    add("No fixed widths >= 480px (overflow risk)", overflow)
+    add("No 100vw / w-screen (scrollbar overflow risk)", vw)
+    return {"root": root, "checks": issues, "issues": sum(1 for i in issues if not i["ok"])}
+
+
 def audit(paths):
     findings = defaultdict(list)          # key -> [(loc, snippet)]
+    scanned = {}
     spacing_values = defaultdict(list)    # px value -> [loc]
     font_sizes, radii = defaultdict(int), defaultdict(int)
     files = 0
@@ -97,6 +221,7 @@ def audit(paths):
         except OSError:
             continue
         files += 1
+        scanned[path] = lines
         for n, line in enumerate(lines, 1):
             loc = f"{path}:{n}"
             snip = line.strip()[:120]
@@ -165,14 +290,30 @@ def audit(paths):
         "summary": {labels[k]: len(v) for k, v in sorted(findings.items(), key=lambda kv: -len(kv[1]) * weights[kv[0]])},
         "system": extra,
         "findings": {labels[k]: [{"loc": loc, "text": t} for loc, t in v] for k, v in findings.items()},
+        "ship": ship_audit(paths, scanned) if files else {"root": None, "checks": [], "issues": 0},
     }
+
+
+def print_ship(ship, limit):
+    if not ship["checks"]:
+        return
+    print(f"\n## Ship-readiness ({ship['issues']} issue(s); project root: {ship['root']})")
+    for c in ship["checks"]:
+        print(f"- [{'x' if c['ok'] else ' '}] {c['check']}")
+        if not c["ok"]:
+            for it in c["items"][:limit]:
+                print(f"    - {it}")
+            if len(c["items"]) > limit:
+                print(f"    - ... {len(c['items']) - limit} more")
 
 
 def print_report(r, limit=8):
     print(f"# Slop audit\n\nFiles scanned: {r['files_scanned']}")
-    print(f"Score: {r['score']}  ({r['rating']})  -- lower is better\n")
+    print(f"Slop score: {r['score']}  ({r['rating']})  -- lower is better")
+    print(f"Ship-readiness issues: {r['ship']['issues']}\n")
     if not r["summary"] and not r["system"]:
-        print("No code-level tells found. Still review the rendered UI for hierarchy and copy.")
+        print("No code-level slop tells found. Still review the rendered UI for hierarchy and copy.")
+        print_ship(r["ship"], limit)
         return
     print("## Summary")
     for label, count in r["summary"].items():
@@ -186,6 +327,7 @@ def print_report(r, limit=8):
             print(f"- {it['loc']}  {it['text']}")
         if len(items) > limit:
             print(f"- ... {len(items) - limit} more")
+    print_ship(r["ship"], limit)
 
 
 def main(argv):

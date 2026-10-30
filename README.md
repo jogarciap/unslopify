@@ -6,11 +6,14 @@ Una skill para que Claude (u otra IA) rediseñe interfaces con look "IA slop" (d
 
 ## Qué hace
 
-1. **Audita** el código con un scanner (`scripts/slop_audit.py`, solo Python estándar) que detecta emojis, degradados, texto en degradado, paletas violeta, glows, glassmorphism, copy genérico, "!!", spacing fuera de escala y exceso de tamaños de fuente y radios.
+0. **Captura el "antes"**: escaneo del código y capturas en móvil, tablet y escritorio, antes de tocar nada. Trabaja en una rama o con respaldo.
+1. **Audita** el código con un scanner (`scripts/slop_audit.py`, solo Python estándar) que detecta emojis, degradados, texto en degradado, paletas violeta, glows, glassmorphism, copy genérico, "!!", spacing fuera de escala y exceso de tamaños de fuente y radios. También revisa si está listo para publicar: título, meta description, favicon, viewport, menú móvil, página 404, links muertos, emails y teléfonos sin link, texto placeholder y riesgos de scroll horizontal.
 2. **Define una dirección** en una frase: base neutra, un acento con significado, un solo toque de personalidad.
-3. **Aplica seis pasadas**, en orden: spacing → type → colour → symbols → **material gráfico** → structure/copy.
-   La pasada de material gráfico decide, con un test de encaje (público, metáfora, lugar, estado, marca y calidad), si conviene agregar una mascota, una ilustración metafórica (por ejemplo, una llama para las rachas), un render del producto o un gráfico hecho con los datos. Si conviene, la construye en SVG/CSS con la paleta del sistema; si no, la deja como propuesta o la descarta.
-4. **Verifica** volviendo a correr el scanner y, si puede, comparando capturas antes/después.
+3. **Aplica siete pasadas**, en orden: spacing → type → colour → symbols → **material gráfico** → structure/copy → **listo para publicar**.
+   - *Material gráfico*: un test de encaje (público, metáfora, lugar, estado, marca y calidad) decide si conviene agregar una mascota, una ilustración metafórica (por ejemplo, una llama para las rachas), un render del producto o un gráfico hecho con los datos.
+   - *Listo para publicar*: sin scroll horizontal, menú móvil, optimizado y probado en móvil, títulos, meta descriptions, favicon, email clickeable, sin links rotos, sin texto placeholder, empty states, mensajes de error y página 404.
+4. **Verifica** con el scanner y con `scripts/page_check.mjs`, que abre la página en 360, 390, 768 y 1440 px y revisa overflow, links, metadatos, botones táctiles chicos, errores de consola y si existe un 404.
+5. **Entrega una propuesta**: `scripts/make_report.py` arma un HTML autocontenido con capturas antes/después lado a lado, puntajes, cambios por pasada con archivos, la decisión de material gráfico, la checklist de publicación, lo que quedó propuesto y cómo revertir.
 
 Ejemplo incluido: [`examples/before.html`](examples/before.html) da **134 (very sloppy)** y [`examples/after.html`](examples/after.html) da **0 (clean)**.
 
@@ -41,11 +44,18 @@ Pídele al agente algo como:
 
 > Unslop this dashboard. / Hacé que esta landing no parezca hecha con IA.
 
-O corre el scanner directamente:
+La respuesta incluye un informe `unslop-report.html` con el antes y el después.
+
+O corre las herramientas directamente:
 
 ```
 python skills/unslop-ui/scripts/slop_audit.py src/
 python skills/unslop-ui/scripts/slop_audit.py src/ --json
+```
+
+```
+# desde la carpeta del proyecto (usa su Playwright)
+node <ruta>/skills/unslop-ui/scripts/page_check.mjs http://localhost:5173 unslop/after
 ```
 
 ## Estructura
@@ -57,9 +67,14 @@ skills/unslop-ui/
   references/
     slop-patterns.md     catálogo de señales de slop y su arreglo
     graphic-material.md  cuándo y cómo agregar mascotas, metáforas y renders
+    ship-readiness.md    móvil, metadatos, links, placeholders, estados y 404
+    report.md            esquema de changes.json y cómo se arma el informe
     case-studies.md      tres casos antes/después
     tokens.md            tokens base (CSS y Tailwind)
-  scripts/slop_audit.py  scanner estático
+  scripts/
+    slop_audit.py        scanner estático (slop + listo para publicar)
+    page_check.mjs       chequeo en navegador con Playwright + capturas
+    make_report.py       informe HTML antes/después
 examples/                demo antes/después
 docs/analisis-del-video.md  análisis original de los rediseños (en español)
 ```
