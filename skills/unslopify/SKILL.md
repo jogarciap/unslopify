@@ -61,7 +61,7 @@ Every run ends with a proposal the user can review and accept or revert.
      --changes changes.json --out <out>/unslop-report.html
    ```
    It produces one self-contained HTML file: side-by-side before/after screenshots (desktop and mobile), scores, the change log, the checklist, open proposals, and an **annotation mode** where the user draws a box on any screenshot and writes what should change.
-3. Show the screenshots in a side panel for review, using the **review view**: only a device picker (desktop / tablet / mobile) and the before and after full-page screenshots side by side, large. Dragging over a screenshot marks an area right away (no button to press). Scores, the change list, and the checklist stay out of it; they go in your reply and in the full report.
+3. Show the screenshots in a side panel for review, using the **review view**: only a device picker (desktop / tablet / mobile), a page picker when several pages were captured, and the before and after full-page screenshots side by side, large. With many screenshots, build with `--link` and publish the images as the Artifact's files instead of embedding them. Dragging over a screenshot marks an area right away (no button to press). Scores, the change list, and the checklist stay out of it; they go in your reply and in the full report.
    ```bash
    python scripts/make_report.py --view review --fragment --before <out>/before --after <out>/after      --changes changes.json --out <out>/review.html
    ```

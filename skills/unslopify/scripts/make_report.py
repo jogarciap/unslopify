@@ -64,7 +64,8 @@ I18N = {
         "Tap again to delete all": "Toca de nuevo para borrar todo",
         "Drag over a screenshot to mark an area and comment on it.": "Arrastra sobre una captura para marcar un área y comentarla.",
         "Drag over a screenshot to mark an area, write the change and press Send to Claude.": "Arrastra sobre una captura para marcar un área, escribe el cambio y presiona Send to Claude.",
-        "Device": "Dispositivo", "Clear": "Borrar todo", "Redesign": "Rediseño de",
+        "Device": "Dispositivo",
+        "Page": "Página", "Clear": "Borrar todo", "Redesign": "Rediseño de",
     }
 }
 LANG = "en"
@@ -132,6 +133,9 @@ body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-
 .top__row { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px }
 .name { font-weight:600; margin-right:auto }
 #annotate-hint { flex-basis:100%; font-size:13px; color:var(--text-3) }
+.pick select { min-height:40px; max-width:min(320px, 100%); padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; font-size:16px }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
+.tabs button:disabled { opacity:.4; cursor:not-allowed }
 .tabs { display:inline-flex; flex-wrap:wrap; gap:2px; padding:3px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2) }
 .tabs button { min-height:36px; padding:6px 14px; border:0; border-radius:8px; background:transparent; color:var(--text-2); font:inherit; font-size:14px; cursor:pointer }
 .tabs button[aria-selected="true"] { background:var(--surface); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.12) }
@@ -198,14 +202,23 @@ def review_groups(before, after):
         label = t({"desktop": "Desktop", "mobile": "Mobile", "tablet": "Tablet"}[kind])
         if page and page != "home":
             label += f" · /{page}"
-        out.append((label, kind, n, b.get(n), a[n]))
+        out.append((label, kind, n, b.get(n), a[n], page or "home"))
     return out
 
 
 def review_doc(ch, title, before, after, out_dir, link, feedback, annotate_js):
     registry, tabs, panes = {}, [], []
-    for i, (label, kind, name, bp, ap_) in enumerate(review_groups(before, after)):
-        tabs.append(f'<button role="tab" aria-selected="{str(i == 0).lower()}" data-i="{i}">{esc(label)}</button>')
+    groups = review_groups(before, after)
+    pages = list(dict.fromkeys(g[5] for g in groups))
+    kinds = [k for k in DEVICE_ORDER if any(g[1] == k for g in groups)]
+    first_kind = groups[0][1] if groups else ""
+    # One tab per device; with several pages, a page picker next to them (a tab per page x device does not scale).
+    tabs = [f'<button role="tab" aria-selected="{str(k == first_kind).lower()}" data-kind="{k}">{t({"desktop": "Desktop", "mobile": "Mobile", "tablet": "Tablet"}[k])}</button>' for k in kinds]
+    picker = ""
+    if len(pages) > 1:
+        opts = "".join(f'<option value="{esc(pg)}">{esc("/" if pg == "home" else "/" + pg)}</option>' for pg in pages)
+        picker = f'<label class="pick"><span class="sr-only">{t("Page")}</span><select id="page-pick">{opts}</select></label>'
+    for i, (label, kind, name, bp, ap_, page) in enumerate(groups):
         cols = []
         for side, path in (("before", bp), ("after", ap_)):
             head = f'<h2>{t(side.capitalize())}</h2>'
@@ -218,7 +231,7 @@ def review_doc(ch, title, before, after, out_dir, link, feedback, annotate_js):
                             f'width="{w}" height="{h}"></div></div>')
             else:
                 cols.append(f'<div class="col">{head}<div class="empty">{t("No capture")}</div></div>')
-        panes.append(f'<div class="pane pane--{kind}" data-i="{i}"{"" if i == 0 else " hidden"}>{"".join(cols)}</div>')
+        panes.append(f'<div class="pane pane--{kind}" data-i="{i}" data-page="{esc(page)}" data-kind="{kind}"{"" if i == 0 else " hidden"}>{"".join(cols)}</div>')
     data = {"project": title, "alwaysOn": True, "i18n": {k: t(k) for k in JS_KEYS}, "shots": registry}
     data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     name = title.split(" — ")[0].strip()
@@ -232,7 +245,7 @@ def review_doc(ch, title, before, after, out_dir, link, feedback, annotate_js):
 </head>
 <body>
 <header class="top"><div class="top__row"><span class="name">{esc(name)}</span>
-<div class="tabs" role="tablist" aria-label="{t('Device')}">{''.join(tabs)}</div>
+{picker}<div class="tabs" role="tablist" aria-label="{t('Device')}">{''.join(tabs)}</div>
 <span id="annotate-hint"></span></div></header>
 <main class="stage">{''.join(panes) or f'<p class="muted">{t("No screenshots were captured for this run.")}</p>'}</main>
 {feedback}

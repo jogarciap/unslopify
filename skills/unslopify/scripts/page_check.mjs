@@ -63,7 +63,10 @@ const linkCache = new Map();
 
 for (const route of routes) {
   const url = route ? new URL(route, baseUrl).href : baseUrl;
-  const slug = (route || "/").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "home";
+  // "/enmarcaci%C3%B3n-a-pedido" -> "enmarcacion-a-pedido" (decoded, accents removed)
+  let decoded = route || "/";
+  try { decoded = decodeURIComponent(decoded); } catch {}
+  const slug = decoded.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "home";
   const pageReport = { url, viewports: [], meta: null, links: null, consoleErrors: [] };
 
   for (const vp of VIEWPORTS) {
@@ -116,7 +119,10 @@ for (const route of routes) {
         for (const el of document.querySelectorAll("a[href], button, [role=button], input, select, textarea")) {
           const r = el.getBoundingClientRect();
           const cs = getComputedStyle(el);
-          if (!r.width || cs.visibility === "hidden" || cs.display === "none") continue;
+          if (!r.width || cs.visibility === "hidden" || cs.display === "none" || +cs.opacity === 0) continue;
+          // A checkbox or radio inside a big clickable label is fine: the label is the target.
+          const lab = el.matches("input") ? el.closest("label") || (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)) : null;
+          if (lab) { const lr = lab.getBoundingClientRect(); if (lr.width >= 44 && lr.height >= 44) continue; }
           if (r.width < 44 && r.height < 44) {
             small.push(`${el.tagName.toLowerCase()} "${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 40)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
           }

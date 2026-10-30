@@ -253,9 +253,20 @@
 
   // ---------------------------------------------------------------- tabs
   function showPane(i) {
-    $$(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.i === String(i))));
-    $$(".pane").forEach((p) => (p.hidden = p.dataset.i !== String(i)));
+    const pane = $(`.pane[data-i="${i}"]`);
+    if (!pane) return;
+    $$(".pane").forEach((p) => (p.hidden = p !== pane));
+    $$(".tabs button").forEach((x) => {
+      x.setAttribute("aria-selected", String(x.dataset.kind ? x.dataset.kind === pane.dataset.kind : x.dataset.i === String(i)));
+      if (x.dataset.kind && pane.dataset.page != null) x.disabled = !$(`.pane[data-page="${CSS.escape(pane.dataset.page)}"][data-kind="${x.dataset.kind}"]`);
+    });
+    const pick = $("#page-pick");
+    if (pick && pane.dataset.page != null) pick.value = pane.dataset.page;
     report();
+  }
+  function showFor(page, kind) {
+    const p = $(`.pane[data-page="${CSS.escape(page)}"][data-kind="${kind}"]`) || $(`.pane[data-page="${CSS.escape(page)}"]`);
+    if (p) showPane(p.dataset.i);
   }
   function reveal(id) {
     const el = shotEl(id);
@@ -263,7 +274,12 @@
     showPane(el.closest(".pane").dataset.i);
     el.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
   }
-  $$(".tabs button").forEach((b) => b.addEventListener("click", () => showPane(b.dataset.i)));
+  $$(".tabs button").forEach((b) => b.addEventListener("click", () => {
+    const cur = $(".pane:not([hidden])");
+    if (b.dataset.kind && cur && cur.dataset.page != null) showFor(cur.dataset.page, b.dataset.kind);
+    else showPane(b.dataset.i);
+  }));
+  $("#page-pick")?.addEventListener("change", (e) => showFor(e.target.value, ($(".pane:not([hidden])") || {}).dataset?.kind));
 
   // ---------------------------------------------------------------- Claude comments
   function report() {
