@@ -6,12 +6,15 @@ Una skill para que Claude (u otra IA) rediseñe interfaces con look "IA slop" (d
 
 ## Qué hace
 
+Por defecto rediseña solo la página principal (o la que indiques). Si pides **toda la página**, mapea todas las páginas del sitio y las rediseña con un sistema compartido. Funciona también con sitios hechos en Wix, Squarespace o Webflow: arma un prototipo aparte con el contenido real.
+
 0. **Captura el "antes"**: escaneo del código y capturas en móvil, tablet y escritorio, antes de tocar nada. Trabaja en una rama o con respaldo.
-1. **Audita** el código con un scanner (`scripts/slop_audit.py`, solo Python estándar) que detecta emojis, degradados, texto en degradado, paletas violeta, glows, glassmorphism, copy genérico, "!!", spacing fuera de escala y exceso de tamaños de fuente y radios. También revisa si está listo para publicar: título, meta description, favicon, viewport, menú móvil, página 404, links muertos, emails y teléfonos sin link, texto placeholder y riesgos de scroll horizontal.
-2. **Define una dirección** en una frase: base neutra, un acento con significado, un solo toque de personalidad.
-3. **Aplica siete pasadas**, en orden: spacing → type → colour → symbols → **material gráfico** → structure/copy → **listo para publicar**.
+1. **Audita** el código con un scanner (`scripts/slop_audit.py`, solo Python estándar) que detecta emojis, degradados, texto en degradado, paletas violeta, glows, glassmorphism, copy genérico, "!!", spacing fuera de escala, exceso de tamaños de fuente y radios, `transition: all` y animaciones infinitas. También revisa si está listo para publicar: título, meta description, favicon, viewport, menú móvil, página 404, links muertos, emails y teléfonos sin link, texto placeholder, riesgos de scroll horizontal, inputs de menos de 16 px (zoom en iPhone) y hovers que se quedan pegados en móvil.
+2. **Define una dirección** en una frase: base neutra, un acento con significado, un solo toque de personalidad. Si pides opciones, arma 2 o 3 versiones (A/B/C) de una sección para que elijas antes de seguir.
+3. **Aplica ocho pasadas**, en orden: spacing → type → colour → symbols → **material gráfico** → structure/copy → **movimiento** → **listo para publicar**.
    - *Material gráfico*: un test de encaje (público, metáfora, lugar, estado, marca y calidad) decide si conviene agregar una mascota, una ilustración metafórica (por ejemplo, una llama para las rachas), un render del producto o un gráfico hecho con los datos.
-   - *Listo para publicar*: sin scroll horizontal, menú móvil, optimizado y probado en móvil, títulos, meta descriptions, favicon, email clickeable, sin links rotos, sin texto placeholder, empty states, mensajes de error y página 404.
+   - *Movimiento*: transiciones con propiedad, curva y duración precisas (ease-out, ~200 ms, solo `transform` y `opacity`), un solo momento animado por página y respeto por `prefers-reduced-motion`. GSAP, Lenis, React Bits o 21st.dev solo cuando la página lo pide.
+   - *Listo para publicar*: sin scroll horizontal, menú móvil, detalles nativos de móvil (inputs de 16 px, sin hover pegado, `100dvh`), títulos, meta descriptions, favicon, email clickeable, sin links rotos, sin texto placeholder, empty states, mensajes de error, página 404 y una **prueba de estrés** con nombres larguísimos, números enormes y listas vacías.
 4. **Verifica** con el scanner y con `scripts/page_check.mjs`, que abre la página en 360, 390, 768 y 1440 px y revisa overflow, links, metadatos, botones táctiles chicos, errores de consola y si existe un 404.
 5. **Entrega una propuesta**: `scripts/make_report.py` arma un HTML autocontenido con capturas antes/después lado a lado, puntajes, cambios por pasada con archivos, la decisión de material gráfico, la checklist de publicación, lo que quedó propuesto y cómo revertir.
 6. **Revisión con recuadros**: en el informe puedes dibujar un recuadro sobre cualquier captura y escribir qué cambiar. Cada comentario lleva la ubicación y los elementos que quedaron dentro (por ejemplo `h2.section-title "El problema…"`).
@@ -70,6 +73,7 @@ skills/unslopify/
   references/
     slop-patterns.md     catálogo de señales de slop y su arreglo
     graphic-material.md  cuándo y cómo agregar mascotas, metáforas y renders
+    motion.md            curvas, duraciones, hover en táctil y cuándo usar GSAP/Lenis
     ship-readiness.md    móvil, metadatos, links, placeholders, estados y 404
     report.md            esquema de changes.json y cómo se arma el informe
     review-loop.md       panel lateral, recuadros y cómo aplicar los comentarios
@@ -82,6 +86,7 @@ skills/unslopify/
     report_annotate.js   modo anotación que se incrusta en el informe
 examples/                demo antes/después
 docs/analisis-del-video.md  análisis original de los rediseños (en español)
+docs/consejos-reels.md      consejos de dos reels (movimiento, A/B/C, prueba de estrés, móvil)
 ```
 
 ## Créditos

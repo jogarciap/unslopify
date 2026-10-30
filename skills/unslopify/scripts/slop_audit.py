@@ -50,6 +50,12 @@ RULES = [
      re.compile(r"\b(?:AI[- ]powered|supercharge\w*|unlock (?:your|the)|seamless(?:ly)?|next[- ]level|revolutioni[sz]e\w*|elevate your|game[- ]chang\w+|welcome back|ready for today|search anything|cutting[- ]edge|blazing[- ]fast|effortless(?:ly)?)\b", re.I)),
     ("exclaim", "Exclamation in UI copy", 2,
      re.compile(r"[A-Za-z0-9%)]!+(?=\s*(?:<|\"|'|`|\{|$))|!!")),
+    ("transition_all", "transition: all (animate named properties instead)", 2,
+     re.compile(r"transition\s*:\s*all\b|\btransition-all\b", re.I)),
+    ("scroll_reveal", "Scroll-reveal on many elements (AOS / whileInView)", 1,
+     re.compile(r"\bdata-aos=|\bwhileInView=", re.I)),
+    ("endless_motion", "Endless decorative animation (pulse, bounce, ping, infinite)", 1,
+     re.compile(r"\banimate-(?:pulse|bounce|ping)\b|animation\s*:[^;}{\n]*\binfinite\b", re.I)),
     ("arbitrary_tw", "Arbitrary Tailwind value", 1,
      re.compile(r"\b(?:p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|gap-x|gap-y|space-x|space-y|text|rounded|w|h|top|left|right|bottom|inset)-\[[^\]]+\]")),
 ]
@@ -163,9 +169,14 @@ def ship_audit(paths, scanned):
                     vw.append(f"{loc}  {snip}")
 
     # project-level checks
-    blob, names = [], []
+    blob, names, css = [], [], []
     for f in project_files(root):
         names.append(os.path.relpath(f, root).replace("\\", "/"))
+        if os.path.splitext(f)[1].lower() in {".css", ".scss", ".sass", ".less"} and os.path.getsize(f) < 400_000:
+            try:
+                css.append(open(f, encoding="utf-8", errors="ignore").read())
+            except OSError:
+                pass
         if os.path.splitext(f)[1].lower() in MARKUP_EXTS | {".ts", ".js", ".mjs"} and os.path.getsize(f) < 400_000:
             try:
                 blob.append(open(f, encoding="utf-8", errors="ignore").read())
@@ -204,6 +215,19 @@ def ship_audit(paths, scanned):
     add("No placeholder text", placeholders)
     add("No fixed widths >= 480px (overflow risk)", overflow)
     add("No 100vw / w-screen (scrollbar overflow risk)", vw)
+    # Mobile-native: inputs under 16px make iOS Safari zoom on focus; bare :hover sticks after a tap.
+    small_inputs = []
+    styles = "\n".join(css + re.findall(r"<style[^>]*>([\s\S]*?)</style>", text, re.I))
+    for m in re.finditer(r"([^{};]*\b(?:input|textarea|select)\b[^{};]*)\{([^}]*)\}", styles, re.I):
+        fs = re.search(r"font-size\s*:\s*([\d.]+)(px|rem|em)", m.group(2), re.I)
+        if fs and float(fs.group(1)) * (16 if fs.group(2) != "px" else 1) < 16:
+            small_inputs.append(m.group(1).strip()[-60:] + " { font-size: " + fs.group(1) + fs.group(2) + " }")
+    small_inputs += [t.group(0)[:80] for t in re.finditer(r"<(?:input|textarea|select)\b[^>]*\btext-(?:xs|sm)\b[^>]*>", text)]
+    add("Inputs at 16px or more (no iOS zoom on focus)", small_inputs[:10])
+    hover_rules = len(re.findall(r":hover\b", styles))
+    guarded = bool(re.search(r"\(\s*hover\s*:\s*hover\s*\)|hoverOnlyWhenSupported|@media\s*\(any-hover", styles + text))
+    add("Hover styles limited to hover-capable devices", [] if (not hover_rules or guarded) else
+        [f"{hover_rules} :hover rule(s) and no @media (hover: hover); they stick after a tap on phones"])
     return {"root": root, "checks": issues, "issues": sum(1 for i in issues if not i["ok"])}
 
 

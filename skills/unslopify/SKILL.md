@@ -1,6 +1,6 @@
 ---
 name: unslopify
-description: Redesign web or mobile UIs that look AI-generated ("AI slop" / "vibecoded") so they look like a senior designer and front-end engineer built them, and make them ready to ship. Use when the user asks to unslop, de-slop, polish, make more professional, make less generic, or "make it look like a real product"; when restyling a landing page, dashboard, or app screen built by an AI tool; or when reviewing a UI for generic AI aesthetics (purple gradients, emoji icons, glow, "Welcome back! 👋" copy, arbitrary spacing). Also decides whether to add graphic material (a mascot, a metaphor illustration like a flame for streaks, a product render), fixes ship-readiness gaps (mobile overflow, mobile menu, page titles, meta descriptions, favicon, broken links, clickable email, placeholder text, empty/error states, 404 page), and delivers a before/after proposal report the user can annotate (draw a box, write a change, send it back) for another round. Works on HTML/CSS, Tailwind, React, Vue, Svelte, Next.js, Astro, and similar.
+description: Redesign web or mobile UIs that look AI-generated ("AI slop", "vibecoded") so they look built by a senior designer and front-end engineer, and make them ready to ship. Use when the user asks to unslop, polish, make a UI less generic or more professional, restyle a landing page, store, dashboard or app screen built by an AI tool or a site builder (Wix, Squarespace), or review a UI for generic AI tells (purple gradients, emoji icons, glow, "Welcome back! 👋" copy, arbitrary spacing, transition: all). Runs eight passes: spacing, type, colour, symbols, graphic material (mascot or metaphor only if it fits), structure and copy, motion, and ship-readiness (mobile overflow and menu, iOS input zoom, sticky hover, titles, meta, favicon, broken links, empty/error states, 404, stress test with long names and huge numbers). Redesigns the main page unless asked for the whole site. Delivers a before/after proposal the user can annotate for another round.
 ---
 
 # Unslopify
@@ -11,12 +11,31 @@ The answer to the user is always a **proposal**: the redesigned page plus a befo
 
 ## Ground rules
 
-- Keep behaviour. Do not change data, state, handlers, APIs, or accessibility semantics. Passes 1–6 are visual and copy passes. Pass 7 may **add** missing pieces (mobile menu, 404 page, empty and error states, metadata) but never removes or rewires existing functionality.
+- Keep behaviour. Do not change data, state, handlers, APIs, or accessibility semantics. Passes 1–7 are visual, copy, and motion passes. Pass 8 may **add** missing pieces (mobile menu, 404 page, empty and error states, metadata) but never removes or rewires existing functionality.
 - Keep the content's meaning. Rewrite tone, not facts. Never invent metrics, testimonials, prices, addresses, or logos. If real content is missing, leave a clearly marked gap in the report instead of new placeholder text.
 - Respect brand rules. If the project has brand or design docs (logo usage, approved palette, `DESIGN.md`, `MARCA.md`, `brand/`), read them first and do not break them; flag conflicts in the report.
 - Make the work reversible. In a git repo, work on a new branch. Otherwise, copy the files you will touch to a backup folder before editing and say where it is.
 - Work in passes (below), in order. Each pass edits the whole UI before the next one starts.
 - Prefer editing tokens/theme/config once over patching every component.
+
+## Scope: one page by default, the whole site on request
+
+- **Default: only the page the user named**, or the home page if they named none. Header, footer, and global styles change with it because they are part of that page. In the reply, list the site's other pages (from the nav, footer, and sitemap) and offer to do them in a follow-up.
+- **Whole site: only when the user asks** ("toda la página", "todo el sitio", "all pages", "the whole site"). Then:
+  1. **Map every page.** Collect internal links from the nav, the footer, `/sitemap.xml` when there is one, and listing pages (product, post, or project detail pages). Group pages that share a template, such as 60 product pages, into one template plus its data. Write the map to `pages.json` (`[{path, title, template}]`) and show the count to the user before building.
+  2. **Capture the before for each page or template**: `node scripts/page_check.mjs <url> <out>/before --paths /,/tienda,/contacto,...`. Screenshots are named `<page>-<viewport>-<fold|full>.png`, and the review view gets one tab per page and device.
+  3. **Build one shared system first**: tokens, header, footer, buttons, and forms in one place, used by every page. Do not restyle each page on its own.
+  4. **Keep every page's content and function**: text, images, forms (same fields and destination), embeds, and links. Cross-page links must point to the redesigned pages; external links stay as they were.
+  5. **Verify every page** for overflow, broken links, and console errors, and list per page what changed and what stayed as it was.
+- On a site with more than about 20 distinct templates, confirm the scope with the user before starting.
+
+## Sites without editable source (Wix, Squarespace, Webflow, Shopify themes)
+
+When the site runs on a hosted builder and you only have the URL:
+- Rebuild the redesign as a static prototype in a separate folder, using the site's real content, images, and links (fetched from the rendered page; builder HTML is mostly script). The live site is never touched.
+- Keep functions working in the prototype (filters, sorting, pagination, cart, forms) and send actions that need the platform (checkout, form submission, booking) to the live site's own URLs. Say this in the proposals.
+- Builders serve a different mobile site by user agent. Capture the mobile "before" with a phone user agent, not only a narrow viewport.
+- In the proposals, explain how to take the design to the builder (editor settings, theme tokens, custom CSS) or what a migration would involve.
 
 ## Workflow
 
@@ -25,7 +44,8 @@ The answer to the user is always a **proposal**: the redesigned page plus a befo
    - If the UI can run (dev server or static file), run the browser check, which also takes the screenshots: `node scripts/page_check.mjs <url> <out>/before` (see [references/ship-readiness.md](references/ship-readiness.md) for setup). If no browser automation is available, use any screenshot tool you have; if none, describe the before state in words.
 1. **Audit.** Read both reports, then look at the rendered UI and list every tell from [references/slop-patterns.md](references/slop-patterns.md) you see. The scanner finds code-level tells; your eyes find hierarchy problems.
 2. **Pick a direction in one sentence**: base (near-black or off-white), one accent colour and what it *means*, one personality move. Example: "Neutral near-black, warm orange only for live/heart data, dot-matrix display font for the hero metric."
-3. **Run the seven passes** below. Passes 1–4 mostly remove; pass 5 may add graphics; pass 7 fixes what blocks publishing.
+   - **Compare directions when the choice is open.** If the user asks for options, or the brand leaves room for very different looks, build 2–3 versions (A/B/C) of **one** key section, usually the hero or the main card. Each version must be a real direction (different type, colour use, and layout idea), not three shades of the same one. Show them side by side with a switcher and let the user pick before running the passes on the whole UI. Default: one direction, no variants.
+3. **Run the eight passes** below. Passes 1–4 mostly remove; pass 5 may add graphics; pass 7 tunes motion; pass 8 fixes what blocks publishing and stress-tests the result.
 4. **Verify.** Re-run the scanner and the browser check into `<out>/after`. The slop score should fall sharply, ship-readiness issues should be zero or explained, there must be no horizontal overflow at 360/390/768/1440 px, and typecheck/build must pass if the project has them.
 5. **Deliver the proposal** (next section).
 
@@ -113,7 +133,19 @@ Removing noise often leaves a correct but anonymous UI. Senior redesigns then ad
 - The primary action looks primary; secondary actions are quiet.
 - Active nav state: subtle surface fill or a small indicator, not a saturated slab.
 
-## Pass 7 — Ship-readiness
+## Pass 7 — Motion and interaction
+
+Motion is where a page feels built by hand or generated. Generated UIs either have none, or put `transition: all .3s ease` on everything and fade every section in on scroll. Details, durations, and library notes are in [references/motion.md](references/motion.md).
+
+- **Animate on purpose.** Name the property and the easing: `transition: transform 200ms ease-out, opacity 200ms ease-out`. Never `transition: all`. Animate only `transform` and `opacity` (cheap, no layout shift); colour and shadow changes may use 150 ms.
+- **Durations**: 100–150 ms for hover and press feedback, 200–250 ms for small elements entering, 300–400 ms for panels, drawers, and modals. Nothing in the interface's own controls goes over 500 ms.
+- **Easing**: `ease-out` (or a custom curve such as `cubic-bezier(.2,.8,.2,1)`) for things that enter or respond to the user; `ease-in` only for things that leave; never `linear` except for loaders and progress.
+- **One signature moment, not ten.** Pick at most one expressive animation for the page: the hero entrance, a scroll-linked product reveal, or the pass-5 graphic reacting to state. Everything else is quiet feedback. Do not fade in every section on scroll.
+- **Give every control feedback**: hover (on devices that hover), `:active` press (`scale(.98)` or a darker fill), visible `:focus-visible`, loading and disabled states on buttons that trigger work.
+- **Respect `prefers-reduced-motion`**: replace movement with opacity changes or nothing.
+- **Libraries only when the page needs them.** For marketing and portfolio pages whose subject calls for a richer scroll experience: GSAP (timelines, ScrollTrigger), Lenis (smooth scroll), and component collections such as React Bits or 21st.dev (animated text, buttons, backgrounds). For dashboards, stores, forms, and tools, CSS transitions are enough. A library effect still has to match the direction, the palette, and the one-signature-moment rule; copied effects such as glowing particle backgrounds, rotating text rings, or "magic" cards are slop of their own.
+
+## Pass 8 — Ship-readiness
 
 Fix what makes a page look unfinished once it is live. Details, code for each framework, and detection rules are in [references/ship-readiness.md](references/ship-readiness.md). The scanner's "Ship-readiness" section and `page_check.mjs` find most of these; check the rest by reading the code.
 
@@ -121,6 +153,12 @@ Fix what makes a page look unfinished once it is live. Details, code for each fr
 - **No horizontal overflow or horizontal scroll** at 360, 390, 768, and 1440 px. Fix the cause (fixed widths, `100vw`, long unbroken strings, absolutely positioned art, wide tables, negative margins); do not hide it with `overflow-x: hidden` on `body` unless the cause is decorative and contained.
 - **Mobile menu.** If navigation links are hidden at small widths, add an accessible toggle (button with `aria-expanded` and `aria-controls`, closes on link click and Escape, focusable links, no layout shift).
 - **Optimize for mobile.** Viewport meta tag; tap targets ≥ 44×44 px; body ≥ 16 px; stacked layouts; full-width primary buttons where it helps; images with `max-width: 100%`; no hover-only interactions.
+- **Mobile-native details** (the bugs a phone shows and a desktop browser does not):
+  - **Inputs at 16 px or more**, so iOS Safari does not zoom the page when a field gets focus. Never fix it with `maximum-scale=1`.
+  - **No sticky hover.** Wrap hover styles in `@media (hover: hover) and (pointer: fine)`, so a tapped button does not stay highlighted.
+  - Use `100dvh` instead of `100vh` for full-height sections and sheets; respect `env(safe-area-inset-*)` on fixed bars.
+  - Set the right `type`, `inputmode`, and `autocomplete` on inputs (email, tel, numeric codes) so the right keyboard opens.
+  - Remove the grey tap flash only if you replace it with your own `:active` state.
 - **Test on mobile.** Run `page_check.mjs` (it emulates phone and tablet viewports) and look at the mobile screenshots. Tell the user what to check on a real device, since emulation is not a physical phone.
 
 **Metadata**
@@ -139,6 +177,16 @@ Fix what makes a page look unfinished once it is live. Details, code for each fr
 - **Error messages**: inline validation next to the field (what is wrong and how to fix it, in plain words), a visible failure message for network or submit errors with a retry, `aria-live="polite"` on message regions, no blame or jargon.
 - **404 page** in the project's own style: say the page does not exist, offer a way home and the main destinations, keep the header and footer. Wire it the framework's way (see the reference).
 
+**Stress test (break the UI on purpose)**
+
+A redesign that only works with tidy demo data is a mock-up. Before delivering, run the main components with worst-case content, using a dev-only toggle or a temporary fixture, and fix what breaks:
+- **Long text**: a 40-character name with no spaces ("Maximiliana Wolfeschlegelsteinhausen"), a three-line product title, a long email, a URL. Use `min-width: 0`, `overflow-wrap: anywhere`, line clamps with a full-text title, and truncation that keeps the important end.
+- **Big and small numbers**: 1,284,093,221, negative values, 0, and missing values (show "—"). Use `font-variant-numeric: tabular-nums` and the locale's formatting.
+- **Counts**: 0 items, 1 item (singular copy), and 500 items (pagination, virtualisation, or "show more").
+- **Missing pieces**: no avatar or image (fallback), no description, a failed request, slow loading (skeleton or spinner).
+- **Other languages and zoom**: text 30% longer (German or Spanish copy) and the browser at 200% zoom.
+List what you tested and what you fixed in `changes.json` under the ship-readiness checklist.
+
 ## Final checklist
 
 - [ ] Before captures and scan saved before any edit; backup or branch exists.
@@ -149,10 +197,13 @@ Fix what makes a page look unfinished once it is live. Details, code for each fr
 - [ ] One focal point per screen; plain, specific copy.
 - [ ] One icon set, one stroke width.
 - [ ] Graphic material decision recorded (add / propose only / skip) with the reason.
+- [ ] No `transition: all`; motion on transform/opacity with ease-out and short durations; at most one signature animation; reduced motion respected.
 - [ ] No horizontal overflow at 360/390/768/1440 px; mobile menu works; tap targets ≥ 44 px.
 - [ ] Unique titles, meta descriptions, favicon, viewport, theme-color.
 - [ ] Emails and phones clickable; no broken or dead links; no placeholder text.
 - [ ] Empty states, error messages, and a 404 page exist where the product needs them.
+- [ ] Inputs ≥ 16 px; hover styles only on hover-capable devices.
+- [ ] Stress test done: long text, huge numbers, empty and single-item lists, missing images.
 - [ ] Behaviour and data unchanged; brand rules respected; typecheck/build pass.
 - [ ] Before/after report built and linked in the reply.
 
@@ -164,6 +215,7 @@ The goal is not "make everything dark grey like Linear". Signs you over-correcte
 
 - [references/slop-patterns.md](references/slop-patterns.md) — catalogue of AI-slop tells, each with the fix.
 - [references/graphic-material.md](references/graphic-material.md) — fit test, graphic types, placement, mascots and metaphor graphics.
+- [references/motion.md](references/motion.md) — motion tokens, easing and duration rules, touch hover, when to use GSAP, Lenis, React Bits, 21st.dev, or Motion.
 - [references/ship-readiness.md](references/ship-readiness.md) — mobile, metadata, links, placeholder text, empty/error states, 404, per framework.
 - [references/report.md](references/report.md) — `changes.json` schema and how the proposal report is built.
 - [references/review-loop.md](references/review-loop.md) — showing the report in a side panel, how annotated comments reach you, and how to apply them.

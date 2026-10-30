@@ -72,13 +72,23 @@ for (const route of routes) {
       deviceScaleFactor: 1,
       isMobile: vp.mobile,
       hasTouch: vp.mobile,
+      // Site builders (Wix, Squarespace) serve a separate mobile site by user agent.
+      ...(vp.mobile ? { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" } : {}),
     });
     const page = await ctx.newPage();
     page.on("console", (m) => m.type() === "error" && pageReport.consoleErrors.push(`${vp.name}: ${m.text()}`));
     page.on("pageerror", (e) => pageReport.consoleErrors.push(`${vp.name}: ${e.message}`));
-    await page.goto(url, { waitUntil: "networkidle", timeout: 60000 }).catch((e) =>
-      pageReport.consoleErrors.push(`${vp.name}: navigation failed: ${e.message}`),
+    // Pages with analytics or chat widgets never go network-idle; fall back to DOM ready.
+    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 }).catch(() =>
+      page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 }).then(() => page.waitForTimeout(5000)).catch((e) =>
+        pageReport.consoleErrors.push(`${vp.name}: navigation failed: ${e.message}`),
+      ),
     );
+    // Scroll through once so lazy-loaded images and sections render before the screenshots.
+    await page.evaluate(async () => {
+      for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight * 0.8) { scrollTo(0, y); await new Promise((r) => setTimeout(r, 150)); }
+      scrollTo(0, 0);
+    }).catch(() => {});
     await page.waitForTimeout(800);
 
     const data = await page.evaluate(({ mobile }) => {
@@ -144,6 +154,7 @@ for (const route of routes) {
         const rx = /[\w.%+-]+@[\w-]+\.[a-z]{2,}/i;
         while (walker.nextNode()) {
           const n = walker.currentNode;
+          if (n.parentElement.closest("script, style, noscript, template")) continue;
           if (rx.test(n.textContent) && !n.parentElement.closest("a[href^='mailto:']")) out.plainEmails.push(n.textContent.trim().slice(0, 60));
         }
         out.internal = [...new Set(out.internal)];

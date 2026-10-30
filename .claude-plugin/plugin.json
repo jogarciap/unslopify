@@ -1,7 +1,7 @@
 {
   "name": "unslopify",
   "description": "Redesign AI-generated UIs so they look built by a senior designer: removes purple gradients, emoji icons, hype copy and arbitrary spacing, and applies a spacing/type/colour/symbol/structure system, decides whether to add a mascot, metaphor illustration or product render, fixes ship-readiness gaps, and delivers a before/after report.",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "license": "MIT",
   "keywords": ["design", "ui", "frontend", "ai-slop", "redesign"]
 }

@@ -1,4 +1,4 @@
-# Ship-readiness (pass 7)
+# Ship-readiness (pass 8)
 
 What makes a page look unfinished once it is live, how to detect it, and how to fix it per framework.
 
