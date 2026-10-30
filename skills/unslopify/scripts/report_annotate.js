@@ -88,7 +88,9 @@
   const areaLabel = (id, [x, y, w, h]) => `${info(id).label} · ${Math.round(w)}×${Math.round(h)} px @ ${Math.round(x)},${Math.round(y)}`;
 
   // ---------------------------------------------------------------- drawing
-  function armed() { return drawing || commentMode; }
+  // review view: drawing is always on, no button needed
+  function armed() { return drawing || commentMode || !!D.alwaysOn; }
+  if (D.alwaysOn) document.body.classList.add("is-drawing");
   function setDrawing(on) {
     drawing = on;
     document.body.classList.toggle("is-drawing", on);
@@ -121,7 +123,11 @@
       const p = toNatural(el, ev);
       let rect = [Math.min(start.x, p.x), Math.min(start.y, p.y), Math.abs(p.x - start.x), Math.abs(p.y - start.y)];
       start = null;
-      if (rect[2] < 8 && rect[3] < 8) rect = [Math.max(0, rect[0] - 16), Math.max(0, rect[1] - 16), 32, 32]; // a click marks a small spot
+      if (rect[2] < 8 && rect[3] < 8) {
+        // with drawing always on, a plain click is not a comment (only a drag is)
+        if (D.alwaysOn && !commentMode) { box.remove(); box = null; return; }
+        rect = [Math.max(0, rect[0] - 16), Math.max(0, rect[1] - 16), 32, 32]; // a click marks a small spot
+      }
       rect = rect.map(Math.round);
       place(box, el.dataset.shot, rect);
       draft = box;
@@ -284,7 +290,9 @@
 
   function setHint() {
     const h = $("#annotate-hint");
-    if (h) h.textContent = ctrl ? T("Draw a box on a screenshot, write the change and press Send to Claude.") : T("Draw a box on a screenshot and describe the change. Then copy the comments for your AI.");
+    if (!h) return;
+    if (D.alwaysOn) h.textContent = ctrl ? T("Drag over a screenshot to mark an area, write the change and press Send to Claude.") : T("Drag over a screenshot to mark an area and comment on it.");
+    else h.textContent = ctrl ? T("Draw a box on a screenshot, write the change and press Send to Claude.") : T("Draw a box on a screenshot and describe the change. Then copy the comments for your AI.");
   }
 
   (async () => {

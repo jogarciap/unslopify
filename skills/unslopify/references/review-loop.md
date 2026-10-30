@@ -10,18 +10,18 @@ The comment reaches you in one of two ways.
 
 ## A. Claude with Artifacts (claude.ai, Claude desktop, Claude Code with the Artifact tool)
 
-1. Publish the report as an Artifact that declares the comments capability with custom anchors:
+1. Build the review view (`make_report.py --view review --fragment …`: device picker plus large before/after screenshots, drawing always on) and publish it as an Artifact that declares the comments capability with custom anchors:
    - `capabilities: {"comments": {"customAnchors": true}}`
    - Keep the file path the same on every republish so the URL stays the same.
    - The page is private by default; it contains screenshots of the user's project, so do not share it unless the user asks.
-2. Tell the user: open the side panel (or the link), press **Mark an area** or enter comment mode, draw a box on a screenshot, write the change, and press **Send to Claude**.
+2. Tell the user: open the side panel (or the link), pick the device, drag over a screenshot to mark an area, write the change, and press **Send to Claude**.
 3. The comment arrives in this session (the publish result says whether the session is watching the artifact; if not, use the ArtifactComments tool to watch it or to read its threads). Its location is the anchor string above; the label and the element list come with it.
 4. For each comment:
    1. Parse the anchor: screenshot (`after/<page>-<viewport>-<fold|full>`), box `x,y,w,h` in page px at that viewport width.
    2. Find the code: grep the project for the selectors and text in the element list (`hero-grid`, `"Toda la red."`); confirm with the layout map if needed.
    3. Make the change. It is still bound by the ground rules: brand docs, behaviour, no invented content. If the request conflicts with them, reply in the thread explaining why and offer an alternative instead of applying it.
    4. Reply in the thread with one or two lines: what changed and in which file.
-5. When the batch is done: re-run `page_check.mjs` into `after/`, rebuild the report with `make_report.py`, add the new changes to `changes.json`, and republish the **same** Artifact. Resolve the threads you handled.
+5. When the batch is done: re-run `page_check.mjs` into `after/`, rebuild both the review view and the full report with `make_report.py`, add the new changes to `changes.json`, and republish the **same** Artifact (same file path). Resolve the threads you handled.
 6. In chat, summarise in a few lines: what changed per comment and what you did not change and why.
 
 If the publish is refused because of `customAnchors`, republish with `capabilities: {"comments": {}}`; the page then falls back to its local comment list (B).

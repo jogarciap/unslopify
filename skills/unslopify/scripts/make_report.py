@@ -5,6 +5,8 @@ Usage:
   python make_report.py --after DIR --changes changes.json --out report.html
                         [--before DIR] [--scan-before before.json] [--scan-after after.json]
                         [--link]      (reference images by relative path instead of embedding)
+                        [--view review]  (only a device picker and large before/after screenshots
+                                          you can draw on; no scores or change list)
                         [--fragment]  (write a body fragment with <title> and <style> first, for hosts
                                        that wrap the page in their own document, e.g. Claude Artifacts)
 
@@ -59,7 +61,10 @@ I18N = {
         "Copied. Paste it in your chat with the AI.": "Copiado. Pégalo en tu chat con la IA.",
         "Could not copy. Use Download instead.": "No se pudo copiar. Usa Descargar.",
         "Delete all comments in this browser?": "¿Borrar todos los comentarios guardados en este navegador?",
-        "Tap again to delete all": "Toca de nuevo para borrar todo", "Clear": "Borrar todo", "Redesign": "Rediseño de",
+        "Tap again to delete all": "Toca de nuevo para borrar todo",
+        "Drag over a screenshot to mark an area and comment on it.": "Arrastra sobre una captura para marcar un área y comentarla.",
+        "Drag over a screenshot to mark an area, write the change and press Send to Claude.": "Arrastra sobre una captura para marcar un área, escribe el cambio y presiona Send to Claude.",
+        "Device": "Dispositivo", "Clear": "Borrar todo", "Redesign": "Rediseño de",
     }
 }
 LANG = "en"
@@ -104,7 +109,138 @@ JS_KEYS = ["Mark an area", "Stop marking", "Draw a box on a screenshot, write th
            "Each item is a box drawn on a screenshot. Coordinates are CSS px of the page at that viewport width.",
            "Apply these changes, re-capture the after screenshots, and rebuild the report.",
            "Copied. Paste it in your chat with the AI.", "Could not copy. Use Download instead.",
-           "Delete all comments in this browser?", "Tap again to delete all", "Clear"]
+           "Delete all comments in this browser?", "Tap again to delete all", "Clear",
+           "Drag over a screenshot to mark an area and comment on it.",
+           "Drag over a screenshot to mark an area, write the change and press Send to Claude."]
+
+REVIEW_CSS = """
+:root {
+  --bg:#F6F6F4; --surface:#FFFFFF; --surface-2:#ECECE9; --line:rgba(0,0,0,.10);
+  --text:#121214; --text-2:#55555C; --text-3:#85858D; --accent:#2F6FEB;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0B0B0C; --surface:#151517; --surface-2:#1E1E21; --line:rgba(255,255,255,.10);
+  --text:#EDEDEF; --text-2:#A6A6AD; --text-3:#72727A; --accent:#6E9BFF; color-scheme:dark; } }
+:root[data-theme="dark"] { color-scheme:dark;
+  --bg:#0B0B0C; --surface:#151517; --surface-2:#1E1E21; --line:rgba(255,255,255,.10);
+  --text:#EDEDEF; --text-2:#A6A6AD; --text-3:#72727A; --accent:#6E9BFF; }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif }
+body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:21; background:var(--bg) }
+.top { position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:var(--bg); border-bottom:1px solid var(--line);
+  padding-block:10px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)) }
+.top__row { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px }
+.name { font-weight:600; margin-right:auto }
+#annotate-hint { flex-basis:100%; font-size:13px; color:var(--text-3) }
+.tabs { display:inline-flex; flex-wrap:wrap; gap:2px; padding:3px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2) }
+.tabs button { min-height:36px; padding:6px 14px; border:0; border-radius:8px; background:transparent; color:var(--text-2); font:inherit; font-size:14px; cursor:pointer }
+.tabs button[aria-selected="true"] { background:var(--surface); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.12) }
+.tabs button:focus-visible, .btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
+.stage { padding-block:16px 48px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)) }
+.pane { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; margin:0 auto }
+.pane[hidden] { display:none }
+.pane--mobile { max-width:880px }
+.pane--tablet { max-width:1600px }
+.col { min-width:0 }
+.col h2 { margin:0 0 8px; font-size:13px; font-weight:600; color:var(--text-2) }
+.empty { padding:48px 16px; border:1px dashed var(--line); border-radius:8px; color:var(--text-3); text-align:center }
+.shot { position:relative; line-height:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface);
+  cursor:crosshair; touch-action:pan-y pinch-zoom }
+.shot img { display:block; width:100%; height:auto; user-select:none; -webkit-user-select:none; -webkit-user-drag:none }
+.box { position:absolute; border:2px solid var(--accent); background:color-mix(in srgb, var(--accent) 14%, transparent); border-radius:4px; pointer-events:none }
+.box--thread { border-style:dashed; background:transparent }
+.box--thread.is-active { border-style:solid; background:color-mix(in srgb, var(--accent) 14%, transparent) }
+.box__num { position:absolute; top:-12px; left:-12px; min-width:24px; height:24px; padding:0 6px; border-radius:999px; background:var(--accent); color:#fff; font:600 12px/24px ui-sans-serif,system-ui,sans-serif; text-align:center }
+.btn { min-height:40px; padding:8px 14px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; font-size:14px; cursor:pointer }
+.btn--primary { background:var(--text); color:var(--bg); border-color:var(--text) }
+.btn--quiet { color:var(--text-3) }
+.muted { color:var(--text-3) }
+.note-form { position:absolute; z-index:5; width:min(340px, 90%); margin-top:8px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.18); line-height:1.5; font-size:14px; cursor:auto }
+.note-form label span { display:block; margin-bottom:4px; color:var(--text-2) }
+.note-form textarea { width:100%; padding:8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text); font:inherit; font-size:16px; resize:vertical }
+.note-form__where { margin:8px 0; font:12px ui-monospace,monospace; color:var(--text-3); word-break:break-word }
+.note-form__actions, .feedback__actions { display:flex; flex-wrap:wrap; gap:8px }
+.feedback { position:fixed; right:calc(16px + env(safe-area-inset-right, 0px)); bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:30; width:min(380px, calc(100vw - 32px)); max-height:min(60vh, 520px); overflow:auto; padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:0 12px 32px rgba(0,0,0,.2); font-size:14px }
+.feedback[hidden] { display:none }
+.feedback ol { margin:12px 0; padding:0; list-style:none; display:grid; gap:8px }
+.feedback li { position:relative; padding:8px 28px 8px 0; border-bottom:1px solid var(--line) }
+.feedback li p { margin:4px 0 0; color:var(--text-2) }
+.feedback .link { padding:0; border:0; background:none; color:var(--text); font:inherit; font-weight:500; text-align:left; cursor:pointer }
+.feedback .del { position:absolute; top:4px; right:0; width:28px; height:28px; border:0; background:none; color:var(--text-3); font-size:18px; cursor:pointer }
+#feedback-status { margin:8px 0 0; min-height:1em }
+@media (max-width:560px) { .pane { grid-template-columns:1fr } }
+"""
+
+DEVICE_ORDER = ["desktop", "tablet", "mobile"]
+DEVICE_PREF = {"desktop": ["1440"], "tablet": ["768"], "mobile": ["390", "360"]}
+
+
+def review_groups(before, after):
+    """One entry per (page, device): the preferred viewport, full page first, fold as fallback."""
+    def names(d):
+        if not d or not os.path.isdir(d):
+            return {}
+        return {os.path.splitext(f)[0]: os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(".png")}
+    b, a = names(before), names(after)
+    found = {}
+    for n in a:
+        m = re.match(r"(?:(.+)-)?(desktop|mobile|tablet)-(\d+)-(fold|full)$", n)
+        if not m:
+            continue
+        page, kind, w, part = m.groups()
+        prefs = DEVICE_PREF[kind]
+        rank = (prefs.index(w) if w in prefs else len(prefs), 0 if part == "full" else 1)
+        key = (page or "", kind)
+        if key not in found or rank < found[key][0]:
+            found[key] = (rank, n)
+    out = []
+    for (page, kind), (_, n) in sorted(found.items(), key=lambda kv: (kv[0][0] != "home", kv[0][0], DEVICE_ORDER.index(kv[0][1]))):
+        label = t({"desktop": "Desktop", "mobile": "Mobile", "tablet": "Tablet"}[kind])
+        if page and page != "home":
+            label += f" · /{page}"
+        out.append((label, kind, n, b.get(n), a[n]))
+    return out
+
+
+def review_doc(ch, title, before, after, out_dir, link, feedback, annotate_js):
+    registry, tabs, panes = {}, [], []
+    for i, (label, kind, name, bp, ap_) in enumerate(review_groups(before, after)):
+        tabs.append(f'<button role="tab" aria-selected="{str(i == 0).lower()}" data-i="{i}">{esc(label)}</button>')
+        cols = []
+        for side, path in (("before", bp), ("after", ap_)):
+            head = f'<h2>{t(side.capitalize())}</h2>'
+            if path:
+                sid = f"{side}/{name}"
+                w, h = png_size(path)
+                registry[sid] = {"label": f"{t(side.capitalize())} · {label_for(name)}", "w": w, "h": h, "layout": layout_for(path)}
+                cols.append(f'<div class="col">{head}<div class="shot" data-shot="{esc(sid)}"><img draggable="false" '
+                            f'alt="{t(side.capitalize())}: {esc(label_for(name))}" src="{img_src(path, out_dir, link)}" '
+                            f'width="{w}" height="{h}"></div></div>')
+            else:
+                cols.append(f'<div class="col">{head}<div class="empty">{t("No capture")}</div></div>')
+        panes.append(f'<div class="pane pane--{kind}" data-i="{i}"{"" if i == 0 else " hidden"}>{"".join(cols)}</div>')
+    data = {"project": title, "alwaysOn": True, "i18n": {k: t(k) for k in JS_KEYS}, "shots": registry}
+    data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    name = title.split(" — ")[0].strip()
+    return f"""<!doctype html>
+<html lang="{esc(ch.get('lang', 'en'))}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{esc(title)}</title>
+<style>{REVIEW_CSS}</style>
+</head>
+<body>
+<header class="top"><div class="top__row"><span class="name">{esc(name)}</span>
+<div class="tabs" role="tablist" aria-label="{t('Device')}">{''.join(tabs)}</div>
+<span id="annotate-hint"></span></div></header>
+<main class="stage">{''.join(panes) or f'<p class="muted">{t("No screenshots were captured for this run.")}</p>'}</main>
+{feedback}
+<script type="application/json" id="unslop-data">{data_json}</script>
+<script>{annotate_js}</script>
+</body>
+</html>
+""", len(tabs)
 
 
 def png_size(path):
@@ -174,6 +310,7 @@ def main():
     ap.add_argument("--changes", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--link", action="store_true")
     ap.add_argument("--fragment", action="store_true")
+    ap.add_argument("--view", choices=["full", "review"], default="full")
     a = ap.parse_args()
 
     ch = load(a.changes) or {}
@@ -381,6 +518,9 @@ tr:last-child td {{ border-bottom:0 }}
 </body>
 </html>
 """
+    if a.view == "review":
+        doc, n_tabs = review_doc(ch, title, a.before, a.after, out_dir, a.link, feedback, annotate_js)
+        tabs = [None] * n_tabs
     if a.fragment:
         head = re.search(r"<head>(.*?)</head>", doc, re.S).group(1)
         body = re.search(r"<body>(.*)</body>", doc, re.S).group(1)

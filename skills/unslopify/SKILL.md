@@ -41,10 +41,13 @@ Every run ends with a proposal the user can review and accept or revert.
      --changes changes.json --out <out>/unslop-report.html
    ```
    It produces one self-contained HTML file: side-by-side before/after screenshots (desktop and mobile), scores, the change log, the checklist, open proposals, and an **annotation mode** where the user draws a box on any screenshot and writes what should change.
-3. Show the report in a side panel:
-   - **Claude with an Artifact tool**: publish it as an Artifact declaring `capabilities: {"comments": {"customAnchors": true}}`. Boxes the user draws open Claude's comment composer on that area, and **Send to Claude** delivers the comment to you with the box location and the elements inside it.
-   - **Elsewhere**: send or open the HTML file (side panel, editor preview, or browser). Comments are kept in the page; the user copies them as a prompt or downloads them as JSON.
-   Keep it in the project (e.g. `unslop/`) and do not commit it unless asked.
+3. Show the screenshots in a side panel for review, using the **review view**: only a device picker (desktop / tablet / mobile) and the before and after full-page screenshots side by side, large. Dragging over a screenshot marks an area right away (no button to press). Scores, the change list, and the checklist stay out of it; they go in your reply and in the full report.
+   ```bash
+   python scripts/make_report.py --view review --fragment --before <out>/before --after <out>/after      --changes changes.json --out <out>/review.html
+   ```
+   - **Claude with an Artifact tool**: publish `review.html` as an Artifact declaring `capabilities: {"comments": {"customAnchors": true}}`. A drawn box opens Claude's comment composer on that area, and **Send to Claude** delivers the comment to you with the box location and the elements inside it. Republish the same file path after each round so the link stays the same.
+   - **Elsewhere**: build without `--fragment` and send or open the file (side panel, editor preview, or browser). Comments are kept in the page; the user copies them as a prompt or downloads them as JSON.
+   Keep the full report (`unslop-report.html`, default view) next to it in the project (e.g. `unslop/`) for whoever wants the details. Do not commit either unless asked.
 4. In your reply, lead with the outcome and the score change, link the report, list the 3–5 most visible changes, say what you did not change and why, explain in one line how to mark areas and send comments, and ask whether to keep or revert the changes.
 5. **Review loop.** When comments arrive (Artifact comments, a pasted prompt, or `unslopify-feedback.json`), apply them, reply per comment, re-capture the after state, rebuild the report, and republish it to the same place. Follow [references/review-loop.md](references/review-loop.md).
 
