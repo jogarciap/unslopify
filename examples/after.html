@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ember Dashboard</title>
+<style>
+  :root {
+    --bg: #0A0A0B; --surface: #131315; --surface-2: #1A1A1D;
+    --border: rgba(255,255,255,0.08);
+    --text: #EDEDEF; --text-2: #A1A1A8; --text-3: #6E6E76;
+    --positive: #4CC38A; --accent: #F2994A;
+    --font-sans: "Geist", "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; }
+  .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  .sidebar { border-right: 1px solid var(--border); padding: 16px 12px; }
+  .brand { display: flex; align-items: center; gap: 8px; padding: 4px 8px; font-weight: 500; }
+  .brand svg { width: 16px; height: 16px; }
+  .search { display: flex; align-items: center; gap: 8px; margin: 16px 0 24px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-3); }
+  .search span { flex: 1; }
+  kbd { font-family: var(--font-mono); font-size: 12px; padding: 0 4px; border: 1px solid var(--border); border-radius: 4px; color: var(--text-3); }
+  .group { padding: 0 8px 8px; font-size: 12px; color: var(--text-3); }
+  .nav a { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; color: var(--text-2); text-decoration: none; }
+  .nav a.active { background: var(--surface-2); color: var(--text); }
+  .nav svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+  .nav .count { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+  main { padding: 32px 40px; }
+  h1 { margin: 0 0 24px; font-size: 28px; font-weight: 500; letter-spacing: -0.02em; }
+  h1 span { color: var(--text-3); }
+  .cards { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .label { color: var(--text-2); }
+  .value { margin-top: 8px; font-size: 28px; font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .card--hero .value { font-size: 44px; }
+  .meta { margin-top: 4px; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+  .meta b { color: var(--positive); font-weight: 400; }
+  .cta { display: inline-flex; margin-top: 24px; padding: 8px 16px; border-radius: 8px; background: var(--text); color: var(--bg); font-weight: 500; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/></svg>Ember</div>
+    <div class="search"><span>Search</span><kbd>⌘</kbd><kbd>K</kbd></div>
+    <div class="group">Navigation</div>
+    <nav class="nav">
+      <a class="active" href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview</a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v7H2v-7z"/></svg>Inbox <span class="count">12</span></a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM8 7V4h8v3"/></svg>Projects</a>
+      <a href="#"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/></svg>Customers</a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M3 20h18M6 16V9M12 16V5M18 16v-4"/></svg>Reports</a>
+    </nav>
+  </aside>
+  <main>
+    <h1>October <span>2026</span></h1>
+    <div class="cards">
+      <div class="card card--hero">
+        <div class="label">Revenue</div>
+        <div class="value">$124,860.40</div>
+        <div class="meta"><b>+4.2%</b> vs September</div>
+      </div>
+      <div class="card">
+        <div class="label">Paid this month</div>
+        <div class="value">$48,210</div>
+        <div class="meta"><b>+12%</b> vs last month</div>
+      </div>
+    </div>
+    <a class="cta" href="#">Create invoice</a>
+  </main>
+</div>
+</body>
+</html>

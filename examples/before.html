@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EmberAI Dashboard</title>
+<style>
+  body { margin: 0; font-family: Inter, sans-serif; background: linear-gradient(135deg, #1e1b4b, #6d28d9); color: #fff; min-height: 100vh; }
+  .app { display: grid; grid-template-columns: 260px 1fr; gap: 15px; padding: 22px; }
+  .sidebar { background: rgba(255,255,255,0.08); backdrop-filter: blur(20px); border-radius: 22px; padding: 18px; }
+  .logo { font-size: 22px; font-weight: 800; }
+  .badge { background: linear-gradient(90deg, #a855f7, #ec4899); border-radius: 10px; padding: 2px 8px; font-size: 11px; }
+  .search { margin: 37px 0 0; padding: 10px 14px; border-radius: 14px; background: rgba(255,255,255,0.1); }
+  .section { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; opacity: .6; margin-top: 42px; }
+  .nav a { display: flex; justify-content: space-between; padding: 11px 13px; color: #fff; text-decoration: none; border-radius: 12px; }
+  .nav a.active { background: linear-gradient(90deg, #7c3aed, #4f46e5); box-shadow: 0 0 24px rgba(139, 92, 246, 0.6); }
+  .pill { background: #8b5cf6; border-radius: 9px; padding: 1px 7px; font-size: 12px; }
+  h1 { font-size: 34px; font-weight: 900; background: linear-gradient(90deg, #f0abfc, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .card { background: linear-gradient(160deg, #4c1d95, #312e81); border-radius: 26px; padding: 26px; box-shadow: 0 10px 40px rgba(168, 85, 247, 0.45); }
+  .label { text-transform: uppercase; letter-spacing: .1em; font-size: 13px; }
+  .value { font-size: 38px; font-weight: 800; }
+  .delta { color: #4ade80; font-size: 15px; }
+  .cta { display: inline-block; margin-top: 28px; padding: 14px 30px; border-radius: 999px; background: linear-gradient(90deg, #ec4899, #8b5cf6); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">✨ EmberAI <span class="badge">PRO</span></div>
+    <div class="search">🔍 Search anything...</div>
+    <div class="section">🧭 Navigation</div>
+    <nav class="nav">
+      <a class="active" href="#">🏠 Overview</a>
+      <a href="#">📥 Inbox <span class="pill">12</span></a>
+      <a href="#">🚀 Projects <span class="pill">New ✨</span></a>
+      <a href="#">👥 Customers</a>
+      <a href="#">📊 Reports</a>
+    </nav>
+  </aside>
+  <main>
+    <h1>Welcome back, Damir! 👋</h1>
+    <div class="cards">
+      <div class="card">
+        <div class="label">💰 Paid this month</div>
+        <div class="value">$48,210</div>
+        <div class="delta">🔥 +12%!!</div>
+      </div>
+      <div class="card">
+        <div class="label">📈 Revenue</div>
+        <div class="value">$124,860.40</div>
+        <div class="delta">🚀 +4.2% this month!!</div>
+      </div>
+    </div>
+    <a class="cta" href="#">Supercharge your workflow 🚀</a>
+    <p>✨ AI-powered insights to unlock your growth!</p>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "unslop-ui",
+  "owner": { "name": "unslop-ui contributors" },
+  "plugins": [
+    {
+      "name": "unslop-ui",
+      "source": "./",
+      "description": "Redesign AI-looking UIs so they look built by a senior designer."
+    }
+  ]
+}
